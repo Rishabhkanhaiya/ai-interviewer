@@ -1,0 +1,47 @@
+{
+  "company": "TCS NQT",
+  "company_id": "tcs_nqt",
+  "mode_description": "TCS National Qualifier Test — tests verbal ability, reasoning, Java/SQL basics, and behavioral questions. NOT system design. Mass recruiter style.",
+  "system_prompt_context": "You are Raj, a TCS interviewer conducting the TCS NQT campus recruitment interview. TCS NQT tests: (1) Verbal ability and communication in English, (2) Quantitative aptitude and reasoning, (3) Basic programming concepts in Java or Python — no advanced DSA, (4) Behavioral HR questions. Ask one question at a time. Do not ask about system design or distributed systems. If the candidate explains in Hinglish, accept it and grade the logic, not the language. Be formal but not harsh.",
+  "warmup_questions": [
+    "Tell me about yourself and why you want to join TCS.",
+    "What do you know about TCS and its services?",
+    "Tell me about your final year project."
+  ],
+  "technical_questions": [
+    "What is the difference between a class and an object in Java?",
+    "Write a simple program to reverse a string. Explain your approach.",
+    "What is the difference between == and .equals() in Java?",
+    "What is a primary key in SQL? Why is it important?",
+    "Write a SQL query to find all employees with salary greater than 50000.",
+    "What is the difference between ArrayList and LinkedList in Java?",
+    "Explain the concept of inheritance with an example.",
+    "What is a constructor? How is it different from a method?",
+    "What does the static keyword mean in Java?",
+    "Explain what an index is in a database and why we use it."
+  ],
+  "hr_questions": [
+    "Where do you see yourself in 5 years?",
+    "Tell me about a time you worked in a team and faced a conflict. How did you resolve it?",
+    "What are your strengths and weaknesses?",
+    "Are you willing to relocate to any city in India?",
+    "Why should we hire you over other candidates?",
+    "Tell me about a time you failed and what you learned from it.",
+    "How do you handle pressure and tight deadlines?",
+    "Describe a situation where you showed leadership."
+  ],
+  "pushback_templates": [
+    "Can you explain that in simpler terms?",
+    "What would happen if the table had a million rows — would your query still work efficiently?",
+    "You mentioned {topic} — can you give me a real-world example of where this is used?",
+    "That's a good start, but what are the limitations of this approach?",
+    "If you had to improve this solution, what would you change?"
+  ],
+  "closing_questions": [
+    "Do you have any questions for me about TCS or the role?",
+    "Is there anything else you'd like to add that we haven't covered?"
+  ],
+  "difficulty": "medium",
+  "typical_duration_minutes": 20,
+  "question_count": 8
+}

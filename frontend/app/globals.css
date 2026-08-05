@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+/* ── Design System: CSS Custom Properties (from spec §4) ────────────────── */
+:root {
+  /* Brand Colors */
+  --color-brand-black:        #0F0F0F;
+  --color-brand-navy:         #111827;
+  --color-accent-indigo:      #4F46E5;
+  --color-accent-indigo-hover:#4338CA;
+  --color-accent-indigo-light:#EEF2FF;
+  --color-warm-orange:        #F59E0B;
+  --color-warm-orange-light:  #FFFBEB;
+  --color-success-green:      #10B981;
+  --color-success-green-light:#ECFDF5;
+  --color-danger-red:         #EF4444;
+  --color-danger-red-light:   #FEF2F2;
+
+  /* Surfaces */
+  --color-page-bg:            #FAFAFA;
+  --color-card:               #FFFFFF;
+  --color-subtle:             #F3F4F6;
+  --color-border:             rgba(0,0,0,0.08);
+  --color-border-strong:      rgba(0,0,0,0.15);
+
+  /* Text */
+  --color-text-primary:       #111827;
+  --color-text-secondary:     #374151;
+  --color-text-muted:         #6B7280;
+  --color-text-disabled:      #9CA3AF;
+  --color-text-on-accent:     #FFFFFF;
+
+  /* Shadows */
+  --shadow-sm:  0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md:  0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-lg:  0 10px 15px rgba(0,0,0,0.05), 0 4px 6px rgba(0,0,0,0.06);
+  --shadow-focus: 0 0 0 3px rgba(79,70,229,0.2);
+
+  /* Typography */
+  --font-sans:  var(--font-inter), Inter, system-ui, -apple-system, sans-serif;
+  --font-mono:  var(--font-mono), 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ── Base Reset ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-page-bg);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Audio Waveform Animation ────────────────────────────────────────────── */
+@keyframes waveBar {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+.wave-bar {
+  animation: waveBar 0.8s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+.wave-bar:nth-child(1) { animation-delay: 0s; }
+.wave-bar:nth-child(2) { animation-delay: 0.1s; }
+.wave-bar:nth-child(3) { animation-delay: 0.2s; }
+.wave-bar:nth-child(4) { animation-delay: 0.3s; }
+.wave-bar:nth-child(5) { animation-delay: 0.2s; }
+.wave-bar:nth-child(6) { animation-delay: 0.1s; }
+.wave-bar:nth-child(7) { animation-delay: 0s; }
+
+/* ── Status Pulse Animations ─────────────────────────────────────────────── */
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+}
+
+@keyframes pulse-indigo {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(79, 70, 229, 0); }
+}
+
+@keyframes pulse-amber {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+}
+
+.pulse-green  { animation: pulse-green  1.5s ease-in-out infinite; }
+.pulse-indigo { animation: pulse-indigo 1.5s ease-in-out infinite; }
+.pulse-amber  { animation: pulse-amber  1.5s ease-in-out infinite; }
+
+/* ── Filler Word Highlight ───────────────────────────────────────────────── */
+.filler-word {
+  background-color: var(--color-warm-orange-light);
+  color: #92400E;
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 500;
+}
+
+/* ── Low Confidence Word ─────────────────────────────────────────────────── */
+.low-confidence-word {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--color-danger-red);
+}
+
+/* ── Score Badge Colors ──────────────────────────────────────────────────── */
+.score-excellent { background: var(--color-success-green-light); color: #065F46; }
+.score-good      { background: var(--color-warm-orange-light);   color: #92400E; }
+.score-poor      { background: var(--color-danger-red-light);    color: #991B1B; }
+
+/* ── Landing Page Hero Gradient ─────────────────────────────────────────── */
+.hero-gradient {
+  background: linear-gradient(
+    135deg,
+    #FAFAFA 0%,
+    #EEF2FF 40%,
+    #F5F3FF 100%
+  );
+}
+
+/* ── Card hover lift ─────────────────────────────────────────────────────── */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ── Scrollbar styling ───────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+
+/* ── Interview session — no scroll, full screen ─────────────────────────── */
+.interview-session-page {
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}

@@ -1,0 +1,38 @@
+{
+  "company": "HR Behavioral",
+  "company_id": "hr_behavioral",
+  "mode_description": "Pure behavioral HR interview — STAR method required. Leadership, conflict, failure, teamwork, communication. Suitable for any company.",
+  "system_prompt_context": "You are Priya, a senior HR interviewer. This is a behavioral round focused entirely on past experiences and soft skills. Use the STAR method framework (Situation, Task, Action, Result) to evaluate answers. Ask one behavioral question at a time. If an answer is missing the Result or Action component, probe with a follow-up. Be warm but firm. Accept Hinglish answers — judge the story structure and self-awareness, not the language. Behavioral round questions should feel natural, like a conversation.",
+  "warmup_questions": [
+    "Tell me about yourself — not your resume, but who you are as a person.",
+    "What's one thing you're genuinely proud of that's not on your resume?",
+    "If your closest friend described you in three words, what would they say?"
+  ],
+  "technical_questions": [],
+  "hr_questions": [
+    "Tell me about a time you had to work with a very difficult teammate. What happened and how did you handle it?",
+    "Describe a situation where you had to take initiative without being asked.",
+    "Tell me about your biggest professional or academic failure. What did you do differently afterward?",
+    "Give me an example of a time you had to meet a very tight deadline. How did you manage it?",
+    "Tell me about a time you disagreed with your manager or professor. How did you handle it?",
+    "Describe a time when you had to learn something completely new in a short time. What was your approach?",
+    "Tell me about a time you helped a struggling team member. What was the outcome?",
+    "Give me an example of a time you showed leadership — even if you weren't in a formal leadership role.",
+    "Tell me about a time you made a mistake that affected others. How did you handle it?",
+    "Describe a situation where you had to juggle multiple competing priorities. How did you decide what to focus on?"
+  ],
+  "pushback_templates": [
+    "That's a good start — but what specifically did YOU do? What was your individual contribution?",
+    "What was the outcome? Did it work? What did you learn?",
+    "You mentioned the situation — tell me more about the action you took.",
+    "How would you handle it differently today?",
+    "That sounds like a team effort — what was YOUR specific role in resolving this?"
+  ],
+  "closing_questions": [
+    "Is there anything about yourself that you'd like to share that we haven't covered?",
+    "Do you have any questions about what the work culture is like here?"
+  ],
+  "difficulty": "medium",
+  "typical_duration_minutes": 20,
+  "question_count": 8
+}

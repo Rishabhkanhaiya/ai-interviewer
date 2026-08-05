@@ -1,0 +1,116 @@
+"""
+Users router — profile management, onboarding, pack status.
+"""
+
+from fastapi import APIRouter, HTTPException, Header
+from db.supabase_client import get_supabase
+from models.schemas import UserOnboarding, UpdateProfileRequest, PackStatusResponse, PackStatus, PackType
+from routers.sessions import get_user_id_from_jwt, get_user_jwt_payload
+from db.redis_client import get_pack_minutes_used, get_pack_rounds_used
+
+router = APIRouter(prefix="/api/users", tags=["users"])
+
+
+@router.post("/onboarding")
+async def complete_onboarding(body: UserOnboarding, authorization: str = Header(...)):
+    """Save first-time onboarding data (name, college, year, targets)."""
+    payload = get_user_jwt_payload(authorization)
+    user_id = payload.get("sub")
+    email = payload.get("email", "")
+    supabase = get_supabase()
+    supabase.table("users").upsert({
+        "id": user_id,
+        "email": email,
+        "name": body.name,
+        "college": body.college,
+        "graduation_year": body.graduation_year,
+        "target_companies": body.target_companies,
+    }).execute()
+    return {"status": "ok"}
+
+
+@router.get("/me")
+async def get_profile(authorization: str = Header(...)):
+    """Get the current user's profile."""
+    user_id = get_user_id_from_jwt(authorization)
+    supabase = get_supabase()
+    result = supabase.table("users").select("*").eq("id", user_id).single().execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="User not found")
+    return result.data
+
+
+@router.put("/profile")
+async def update_profile(body: UpdateProfileRequest, authorization: str = Header(...)):
+    """Update user profile fields."""
+    user_id = get_user_id_from_jwt(authorization)
+    supabase = get_supabase()
+    update_data = body.model_dump(exclude_none=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    supabase.table("users").update(update_data).eq("id", user_id).execute()
+    return {"status": "ok"}
+
+
+@router.delete("/me")
+async def delete_account(authorization: str = Header(...)):
+    """Delete user account and all associated data."""
+    user_id = get_user_id_from_jwt(authorization)
+    supabase = get_supabase()
+    # Supabase cascades via FK: sessions, packs, payments, affiliates
+    supabase.auth.admin.delete_user(user_id)
+    supabase.table("users").delete().eq("id", user_id).execute()
+    return {"status": "deleted"}
+
+
+@router.get("/pack-status", response_model=PackStatusResponse)
+async def get_pack_status(authorization: str = Header(...)):
+    """Get current pack status — rounds and minutes remaining."""
+    user_id = get_user_id_from_jwt(authorization)
+    supabase = get_supabase()
+
+    result = (
+        supabase.table("packs")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    packs = result.data or []
+
+    # Find active pack
+    active_pack = None
+    for pack in packs:
+        if pack["rounds_used"] < pack["rounds_total"] and pack["minutes_used"] < pack["minutes_total"]:
+            active_pack = pack
+            break
+
+    if not active_pack:
+        return PackStatusResponse(has_active_pack=False)
+
+    # Get Redis values for freshest counts
+    redis_minutes = 0.0
+    redis_rounds = 0
+    try:
+        redis_minutes = await get_pack_minutes_used(active_pack["id"])
+        redis_rounds = await get_pack_rounds_used(active_pack["id"])
+    except Exception as e:
+        print(f"[Pack Status] Redis connection error, falling back to Supabase counts: {e}")
+
+    minutes_used = max(float(active_pack["minutes_used"]), redis_minutes)
+    rounds_used = max(int(active_pack["rounds_used"]), redis_rounds)
+
+    return PackStatusResponse(
+        has_active_pack=True,
+        pack=PackStatus(
+            pack_id=active_pack["id"],
+            pack_type=PackType(active_pack["pack_type"]),
+            rounds_total=active_pack["rounds_total"],
+            rounds_used=rounds_used,
+            rounds_remaining=max(0, active_pack["rounds_total"] - rounds_used),
+            minutes_total=active_pack["minutes_total"],
+            minutes_used=minutes_used,
+            minutes_remaining=max(0.0, active_pack["minutes_total"] - minutes_used),
+            has_active_pack=True,
+        ),
+    )

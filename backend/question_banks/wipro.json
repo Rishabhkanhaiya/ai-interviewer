@@ -1,0 +1,45 @@
+{
+  "company": "Wipro NLTH",
+  "company_id": "wipro",
+  "mode_description": "Wipro National Level Talent Hunt — aptitude, English communication, basic technical. Similar to TCS but more emphasis on communication skills.",
+  "system_prompt_context": "You are Ananya, a Wipro HR and technical interviewer. Wipro NLTH tests: (1) English communication skills — clarity, grammar, fluency, (2) Aptitude and reasoning, (3) Basic technical knowledge — OOP, databases, networking basics, (4) HR behavioral. Be professional and warm. Wipro values communication skills highly, so give feedback on clarity of expression. Accept Hinglish but gently encourage English responses for communication evaluation.",
+  "warmup_questions": [
+    "Please introduce yourself and tell me about your educational background.",
+    "What motivated you to apply to Wipro?",
+    "Tell me about your final year project in brief."
+  ],
+  "technical_questions": [
+    "What is object-oriented programming? Name and explain its four pillars.",
+    "What is polymorphism? Give a real-life example.",
+    "What is the difference between a compiler and an interpreter?",
+    "Explain what a network protocol is. Name three common protocols.",
+    "What is normalization in databases? Why do we need it?",
+    "What is the difference between TCP and UDP?",
+    "What is an operating system? What are its main functions?",
+    "Explain what cloud computing is in simple terms.",
+    "What is the difference between RAM and ROM?",
+    "What is a firewall and why is it important?"
+  ],
+  "hr_questions": [
+    "Tell me about a time you contributed significantly to a team project.",
+    "How do you handle a situation where you don't know the answer to a question?",
+    "Are you willing to work in shifts or relocate if required?",
+    "What do you consider your biggest achievement so far?",
+    "How do you manage stress during examination or project deadlines?",
+    "Tell me about a time you resolved a conflict in a group."
+  ],
+  "pushback_templates": [
+    "Could you explain that in simpler English? Imagine you're explaining to someone non-technical.",
+    "That's correct. Can you give me a real-world application of this concept?",
+    "Interesting. What are the disadvantages of the approach you described?",
+    "Can you elaborate on that with an example?",
+    "Good. Now how would you explain that to a non-technical manager?"
+  ],
+  "closing_questions": [
+    "Do you have any questions about Wipro's training programs or growth opportunities?",
+    "Is there anything about yourself you'd like to add before we conclude?"
+  ],
+  "difficulty": "easy",
+  "typical_duration_minutes": 20,
+  "question_count": 8
+}

@@ -1,0 +1,47 @@
+{
+  "company": "Infosys InfyTQ",
+  "company_id": "infosys",
+  "mode_description": "Infosys campus recruitment — tests Python programming, data structures basics, problem-solving, and behavioral HR. Online test + HR round.",
+  "system_prompt_context": "You are Priya, an Infosys HR and technical interviewer. Infosys InfyTQ campus interviews test: (1) Python programming — loops, functions, OOP, (2) Basic data structures — lists, dictionaries, stacks, queues, (3) Problem solving — pseudo-code, algorithm thinking, (4) HR behavioral questions — STAR format preferred. Be encouraging and professional. If candidate uses Hinglish, accept it. Grade the logical correctness, not the accent or language.",
+  "warmup_questions": [
+    "Tell me about yourself and your interest in joining Infosys.",
+    "What do you know about Infosys and its business model?",
+    "Tell me about your strongest technical skill."
+  ],
+  "technical_questions": [
+    "What is the difference between a list and a tuple in Python?",
+    "Write a Python function to check if a number is prime. Explain your logic.",
+    "What is a dictionary in Python? Give an example use case.",
+    "Explain object-oriented programming with a real-world example.",
+    "What is the difference between a stack and a queue? Where would you use each?",
+    "Write a Python function to find the factorial of a number using recursion.",
+    "What is the time complexity of searching in a sorted list vs an unsorted list?",
+    "Explain what an API is and how you've used one in your projects.",
+    "What is the difference between GET and POST in HTTP?",
+    "How does Python handle memory management?"
+  ],
+  "hr_questions": [
+    "Describe a challenging project you worked on and how you overcame the difficulties.",
+    "Tell me about a time you demonstrated leadership in a team.",
+    "How do you prioritize tasks when you have multiple deadlines?",
+    "Where do you see yourself in 3 years?",
+    "What motivates you to work hard?",
+    "Tell me about a time you received critical feedback. How did you handle it?",
+    "Are you comfortable working in a service-based company?",
+    "What are your salary expectations?"
+  ],
+  "pushback_templates": [
+    "Interesting approach. But what if the input list is empty — does your code handle that?",
+    "You mentioned recursion — could you solve this iteratively instead? What are the trade-offs?",
+    "Can you think of an edge case where your solution would fail?",
+    "Good. Now what is the space complexity of your solution?",
+    "Could you optimize this further?"
+  ],
+  "closing_questions": [
+    "Do you have any questions about the Infosys training program or the work culture?",
+    "Is there anything you'd like us to know about you that we haven't discussed?"
+  ],
+  "difficulty": "medium",
+  "typical_duration_minutes": 20,
+  "question_count": 8
+}
