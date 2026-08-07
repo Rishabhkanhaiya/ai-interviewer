@@ -35,12 +35,13 @@ async def create_razorpay_order(amount_paise: int, receipt: str, notes: dict) ->
 
 
 @router.post("/create-order", response_model=CreateOrderResponse)
-async def create_order(body: CreateOrderRequest, authorization: str = Header(...)):
+async def create_order(request: Request, body: CreateOrderRequest, authorization: str = Header(...)):
     """
     Create a Razorpay order for pack purchase.
     Validates affiliate code if provided.
     """
     user_id = get_user_id_from_jwt(authorization)
+    client_ip = request.client.host if request.client else None
     supabase = get_supabase()
 
     # Determine price
@@ -72,6 +73,7 @@ async def create_order(body: CreateOrderRequest, authorization: str = Header(...
         "amount_paise": amount_paise,
         "status": "pending",
         "affiliate_code": body.affiliate_code,
+        "ip_address": client_ip,
     }).execute()
 
     return CreateOrderResponse(
@@ -159,28 +161,65 @@ async def razorpay_webhook(request: Request):
             if affiliate_result.data:
                 affiliate = affiliate_result.data[0]
 
-                # Get payment record id
+                # Get payment record id and ip
                 payment_record = (
                     supabase.table("payments")
-                    .select("id")
+                    .select("id, ip_address")
                     .eq("razorpay_payment_id", razorpay_payment_id)
                     .single()
                     .execute()
                 )
                 if payment_record.data:
+                    buyer_ip = payment_record.data.get("ip_address")
+                    
+                    # Fraud Detection
+                    is_fraud = False
+                    fraud_reason = None
+                    
+                    # 1. Same user ID
+                    if user_id == affiliate["user_id"]:
+                        is_fraud = True
+                        fraud_reason = "self_buy_same_account"
+                    # 2. IP Clustering check (buyer IP == any IP used by affiliate)
+                    elif buyer_ip:
+                        affiliate_ips_res = supabase.table("payments").select("ip_address").eq("user_id", affiliate["user_id"]).execute()
+                        affiliate_ips = [r["ip_address"] for r in (affiliate_ips_res.data or []) if r.get("ip_address")]
+                        if buyer_ip in affiliate_ips:
+                            is_fraud = True
+                            fraud_reason = "ip_clustering_match"
+
                     # Create payout record
+                    affiliate_type = affiliate.get("affiliate_type", "campus")
+                    monthly_sales = affiliate.get("monthly_sales", 0)
+                    if affiliate_type == "campus":
+                        commission_bps = 2000
+                    elif monthly_sales >= 49:
+                        commission_bps = 3000
+                    elif monthly_sales >= 24:
+                        commission_bps = 2800
+                    else:
+                        commission_bps = 2500
+                        
+                    commission_paise = payment_data["amount"] * commission_bps // 10_000
+                    
+                    payout_status = "pending"
+                    
                     supabase.table("affiliate_payouts").insert({
                         "affiliate_id": affiliate["id"],
                         "payment_id": payment_record.data["id"],
-                        "amount_paise": settings.affiliate_commission_paise,
-                        "status": "pending",
+                        "amount_paise": commission_paise,
+                        "status": payout_status,
+                        "is_flagged": is_fraud,
+                        "flag_reason": fraud_reason,
                     }).execute()
 
-                    # Update affiliate totals
-                    supabase.table("affiliates").update({
-                        "total_referrals": affiliate["total_referrals"] + 1,
-                        "total_earned_paise": affiliate["total_earned_paise"] + settings.affiliate_commission_paise,
-                    }).eq("id", affiliate["id"]).execute()
+                    # Only update affiliate totals if not fraud
+                    if not is_fraud:
+                        supabase.table("affiliates").update({
+                            "total_referrals": affiliate["total_referrals"] + 1,
+                            "monthly_sales": monthly_sales + 1,
+                            "total_earned_paise": affiliate["total_earned_paise"] + commission_paise,
+                        }).eq("id", affiliate["id"]).execute()
 
     elif event == "payment.failed":
         order_id = payload["payload"]["payment"]["entity"].get("order_id")

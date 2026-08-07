@@ -23,10 +23,11 @@ export default function AuthPage() {
   const router = useRouter()
   const [stage, setStage] = useState<'email' | 'otp' | 'onboarding'>('email')
   const [email, setEmail] = useState('')
-  const [otp, setOtp] = useState(['', '', '', '', '', '', '', ''])
+  const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [resendTimer, setResendTimer] = useState(0)
+  const [collegeSlug, setCollegeSlug] = useState<string | null>(null)
   const otpRefs = useRef<(HTMLInputElement | null)[]>([])
 
   // Countdown timer for OTP resend
@@ -40,9 +41,12 @@ export default function AuthPage() {
   // Check URL params on load; sign out any lingering session so user must verify via OTP
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      if (window.location.search.includes('onboarding=true')) {
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('onboarding') === 'true') {
         setStage('onboarding')
       } else {
+        const slug = urlParams.get('college')
+        if (slug) setCollegeSlug(slug)
         // Check if we have a saved email from a previous OTP send
         const savedEmail = sessionStorage.getItem('auth_pending_email')
         if (savedEmail) {
@@ -115,23 +119,23 @@ function getErrorMessage(e: unknown, defaultMsg: string): string {
     if (!/^[A-Z0-9]*$/.test(cleanValue)) return
     if (cleanValue.length > 1) {
       // Handle paste of full OTP
-      const chars = cleanValue.slice(0, 8).split('')
+      const chars = cleanValue.slice(0, 6).split('')
       const newOtp = [...otp]
-      chars.forEach((c, i) => { if (index + i < 8) newOtp[index + i] = c })
+      chars.forEach((c, i) => { if (index + i < 6) newOtp[index + i] = c })
       setOtp(newOtp)
-      const nextIndex = Math.min(index + chars.length, 7)
+      const nextIndex = Math.min(index + chars.length, 5)
       otpRefs.current[nextIndex]?.focus()
       return
     }
     const newOtp = [...otp]
     newOtp[index] = cleanValue
     setOtp(newOtp)
-    if (cleanValue && index < 7) otpRefs.current[index + 1]?.focus()
+    if (cleanValue && index < 5) otpRefs.current[index + 1]?.focus()
   }
 
   const handleVerifyOtp = async () => {
     const code = otp.join('').trim()
-    if (code.length < 8) { setError('Enter the complete 8-character verification code'); return }
+    if (code.length < 6) { setError('Enter the complete 6-character verification code'); return }
     setLoading(true)
     setError(null)
     try {
@@ -175,7 +179,7 @@ function getErrorMessage(e: unknown, defaultMsg: string): string {
         }
       }
     } catch (e: unknown) {
-      setError(getErrorMessage(e, 'Invalid or expired 8-character verification code. Please check and try again.'))
+      setError(getErrorMessage(e, 'Invalid or expired 6-character verification code. Please check and try again.'))
     } finally {
       setLoading(false)
     }
@@ -208,6 +212,11 @@ function getErrorMessage(e: unknown, defaultMsg: string): string {
             </div>
             InterviewAI
           </div>
+          {collegeSlug && (
+            <div className="mt-2 text-sm font-medium text-indigo-600 bg-indigo-50 inline-block px-3 py-1 rounded-full border border-indigo-100">
+              Welcome, {collegeSlug.toUpperCase()} Student!
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl border border-black/8 shadow-lg p-8">
@@ -215,7 +224,7 @@ function getErrorMessage(e: unknown, defaultMsg: string): string {
           {stage === 'email' && (
             <>
               <h1 className="text-xl font-semibold text-gray-900 mb-1">Sign in to continue</h1>
-              <p className="text-sm text-gray-500 mb-6">We'll send an 8-character verification code to your email</p>
+              <p className="text-sm text-gray-500 mb-6">We'll send a 6-character verification code to your email</p>
               {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">{error}</div>}
               <div className="space-y-4">
                 <input
@@ -244,7 +253,7 @@ function getErrorMessage(e: unknown, defaultMsg: string): string {
               <p className="text-sm text-gray-500 mb-6">
                 Sent to {email} &nbsp;
                 <button
-                  onClick={() => { sessionStorage.removeItem('auth_pending_email'); setStage('email'); setOtp(['','','','','','','','']); setError(null) }}
+                  onClick={() => { sessionStorage.removeItem('auth_pending_email'); setStage('email'); setOtp(['','','','','','']); setError(null) }}
                   className="text-indigo-500 hover:underline text-xs"
                 >Change email</button>
               </p>

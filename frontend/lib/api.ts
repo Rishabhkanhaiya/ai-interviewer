@@ -3,7 +3,7 @@ import { supabase } from './supabase'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_URL,
 })
 
@@ -69,6 +69,7 @@ export const apiClient = {
   completeOnboarding: (data: object) => api.post('/api/users/onboarding', data),
   getPackStatus: (): Promise<{ data: PackStatus }> => api.get('/api/users/pack-status'),
   deleteAccount: () => api.delete('/api/users/me'),
+  getLeaderboard: () => api.get('/api/users/leaderboard'),
 
   // Sessions
   startSession: (data: StartSessionRequest): Promise<{ data: StartSessionResponse }> =>

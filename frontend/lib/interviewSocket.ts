@@ -16,11 +16,20 @@ export interface TranscriptEntry {
   wpm?: number;
 }
 
+// Fix 4 — explicit protocol mapping, no blind string replace
+function getWsUrl(sessionId: string, authToken: string): string {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
+  const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
+  const host = apiUrl.replace(/^https?:\/\//, '');
+  return `${wsProtocol}://${host}/ws/interview/${sessionId}?token=${authToken}`;
+}
+
 export class InterviewSocketManager {
   private ws: WebSocket | null = null;
+  private isConnecting = false;
   private audioEngine: AudioQueueManager;
   private micRecorder: MicRecorderManager;
-  private connectionGuard = false;   // Prevents React Strict Mode double-mount
+  private lastUserTurnStart: number = 0;
 
   // Callbacks for React component to update UI
   onStateChange?: (state: SessionState) => void;
@@ -31,52 +40,63 @@ export class InterviewSocketManager {
   onError?: (message: string) => void;
 
   constructor() {
+    // Fix 3 — pass onPlaybackStart and onPlaybackEnd to AudioQueueManager
     this.audioEngine = new AudioQueueManager(
-      () => this.onStateChange?.('ai_speaking'),
-      () => this.onStateChange?.('user_turn')
+      () => this.onStateChange?.('ai_speaking'),  // fires on FIRST chunk
+      () => {                                      // fires after LAST chunk ends
+        this.onStateChange?.('user_turn');
+        this.micRecorder.startRecording();
+      }
     );
     this.micRecorder = new MicRecorderManager();
   }
 
-  async connect(sessionId: string, authToken: string): Promise<void> {
-    // CRITICAL: Prevent double connection from React Strict Mode
-    if (this.connectionGuard) return;
-    this.connectionGuard = true;
+  // Fix 2 — AudioContext MUST be created/resumed inside the gesture handler.
+  // This method must be called synchronously from a click handler, not a useEffect.
+  async initAudio(): Promise<void> {
+    await this.audioEngine.resume();
+  }
 
-    // Initialize mic before connecting WebSocket
+  async connect(sessionId: string, authToken: string): Promise<void> {
+    // Fix 1 — guard against double-fire (StrictMode, re-render, etc.)
+    if (this.isConnecting || this.ws) return;
+    this.isConnecting = true;
+
+    // Initialize mic
     const micReady = await this.micRecorder.initialize();
     if (!micReady) {
+      this.isConnecting = false;
       this.onError?.('Microphone access denied. Please allow microphone and refresh.');
       return;
     }
 
-    // Resume AudioContext (requires user gesture — this is called from a button click)
-    await this.audioEngine.resume();
+    const wsUrl = getWsUrl(sessionId, authToken);
+    const ws = new WebSocket(wsUrl);
+    this.ws = ws;
 
-    const wsUrl = `${process.env.NEXT_PUBLIC_API_URL!.replace('https', 'wss')}/ws/interview/${sessionId}?token=${authToken}`;
-    
-    this.ws = new WebSocket(wsUrl);
     this.onStateChange?.('connecting');
 
-    this.ws.onopen = () => {
-      console.log('[InterviewSocket] Connected');
-      // Backend will immediately send the first question
+    ws.onopen = () => {
+      this.isConnecting = false;
+      console.log('[InterviewSocket] Connected to', wsUrl);
+      // Backend sends first question immediately after open
     };
 
-    this.ws.onmessage = async (event) => {
+    ws.onmessage = async (event) => {
       const message = JSON.parse(event.data);
       await this.handleMessage(message);
     };
 
-    this.ws.onclose = (event) => {
+    ws.onclose = (event) => {
+      // Only clear if this is still the active socket
+      if (this.ws === ws) this.ws = null;
+      this.isConnecting = false;
       if (event.code !== 1000) {
-        // Abnormal close — don't reconnect, show error
         this.onError?.('Connection lost. Please refresh and try again.');
       }
     };
 
-    this.ws.onerror = (error) => {
-      console.error('[InterviewSocket] WebSocket error:', error);
+    ws.onerror = () => {
       this.onError?.('Connection error. Check your internet and try again.');
     };
   }
@@ -86,36 +106,39 @@ export class InterviewSocketManager {
 
       case 'question':
       case 'question_audio_continuation': {
-        // Backend sends complete question text + audio
-        const { text, audio_base64, question_number } = message as unknown as {
+        const { text, audio_base64, question_number, is_last } = message as unknown as {
           text?: string;
-          audio_base64: string;
+          audio_base64: string | null;
           question_number?: number;
+          is_last?: boolean;
         };
-        
-        // Display question text immediately (before audio plays)
+
+        // Display text only on first segment (type === 'question') — prevents duplicates
         if (text && question_number) {
           this.onQuestionDisplay?.(text, question_number);
           this.onTranscriptUpdate?.({ speaker: 'ai', text, timestamp: Date.now() });
         }
-        
-        // Queue audio for playback
-        // AudioQueueManager will call onPlaybackEnd → triggers user_turn state
+
         if (audio_base64) {
+          // Enqueue — AudioQueueManager fires onPlaybackStart on first chunk (Fix 3)
           await this.audioEngine.enqueue(audio_base64);
+        } else if (is_last) {
+          // TTS returned no audio on last segment — fallback so state doesn't freeze
+          console.warn('[InterviewSocket] TTS returned no audio — falling through to user_turn');
+          this.onStateChange?.('user_turn');
+          this.micRecorder.startRecording();
         }
         break;
       }
 
       case 'user_turn': {
-        // Explicit signal that it's user's turn (if audio was skipped)
         this.onStateChange?.('user_turn');
+        this.lastUserTurnStart = Date.now();
         this.micRecorder.startRecording();
         break;
       }
 
       case 'transcript_update': {
-        // Partial transcript from STT during processing (optional)
         const { text } = message as unknown as { text: string };
         this.onTranscriptUpdate?.({ speaker: 'user', text, timestamp: Date.now() });
         break;
@@ -140,39 +163,55 @@ export class InterviewSocketManager {
       }
     }
   }
-
-  /**
-   * Called when user clicks "Done Answering".
-   * Stops recording, sends audio to backend for STT processing.
-   */
   async submitAnswer(): Promise<void> {
     this.onStateChange?.('processing');
-    
+
     const audioBlob = await this.micRecorder.stopRecording();
-    if (!audioBlob || audioBlob.size < 1000) {
-      // Audio too short — ask user to try again
-      this.onError?.('Answer too short. Please speak for at least 2 seconds.');
+
+    // Phase 9: Play acknowledgment filler if user spoke for > 5 seconds
+    const turnDuration = Date.now() - this.lastUserTurnStart;
+    if (turnDuration > 5000) {
+      console.log(`[SUBMIT] Turn was ${turnDuration}ms. Playing filler audio...`);
+      const fillers = ['/fillers/hmm.mp3', '/fillers/got_it.mp3', '/fillers/interesting.mp3'];
+      const randomFiller = fillers[Math.floor(Math.random() * fillers.length)];
+      const audio = new Audio(randomFiller);
+      audio.play().catch(e => console.log('Filler playback skipped/failed (ensure files exist in public/fillers):', e));
+    }
+
+    // Fix A — Debug: check blob in browser console
+    console.log('[SUBMIT] Audio blob:', audioBlob);
+    console.log('[SUBMIT] Audio blob size:', audioBlob?.size, 'bytes');
+    console.log('[SUBMIT] Audio blob type:', audioBlob?.type);
+
+    if (!audioBlob) {
+      console.error('[SUBMIT] audioBlob is null — MediaRecorder failed to produce audio');
+      this.onError?.('Microphone not recording. Please refresh the page and allow mic access.');
       this.onStateChange?.('user_turn');
       this.micRecorder.startRecording();
       return;
     }
 
-    // Convert blob to base64 to send over WebSocket
+    if (audioBlob.size < 1000) {
+      console.error('[SUBMIT] Audio too small:', audioBlob.size, 'bytes — likely silence');
+      this.onError?.('Please speak for at least 3 seconds before clicking Done Answering.');
+      this.onStateChange?.('user_turn');
+      this.micRecorder.startRecording();
+      return;
+    }
+
+    console.log('[SUBMIT] Sending audio to backend:', audioBlob.size, 'bytes,', audioBlob.type);
     const base64 = await this.blobToBase64(audioBlob);
-    
-    // Send to backend
+    console.log('[SUBMIT] Base64 length:', base64.length);
+
     this.ws?.send(JSON.stringify({
       type: 'submit_answer',
       audio_base64: base64,
-      audio_format: audioBlob.type,  // e.g., 'audio/webm;codecs=opus'
+      audio_format: audioBlob.type || 'audio/webm;codecs=opus',
     }));
   }
 
-  /**
-   * Barge-in: stop AI speaking if user starts talking.
-   * Connect this to VAD or a manual button.
-   */
   bargeIn(): void {
+    // Fix 3 — reset hasFiredPlaybackStart on barge-in so next utterance re-fires ai_speaking
     this.audioEngine.stopAll();
     this.onStateChange?.('user_turn');
     this.micRecorder.startRecording();
@@ -191,14 +230,12 @@ export class InterviewSocketManager {
     });
   }
 
-  /**
-   * Clean disconnect on session end or component unmount.
-   */
   async disconnect(): Promise<void> {
+    const ws = this.ws;
+    this.ws = null;
+    this.isConnecting = false;
     this.micRecorder.destroy();
     await this.audioEngine.destroy();
-    this.ws?.close(1000, 'Session ended normally');
-    this.ws = null;
-    this.connectionGuard = false;
+    ws?.close(1000, 'Session ended normally');
   }
 }

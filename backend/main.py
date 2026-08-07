@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 
 from config import get_settings
-from routers import sessions, payments, users, affiliates, admin
+from routers import sessions, payments, users, affiliates, admin, drives, email_triggers, notifications, b2b
 from routers.interview_ws import interview_websocket_handler
 from db.redis_client import check_rate_limit, check_concurrent_sessions
 from db.supabase_client import get_supabase
@@ -38,7 +38,12 @@ app = FastAPI(
 # ── CORS ─────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url],
+    allow_origins=[
+        settings.frontend_url,
+        settings.affiliate_portal_url,
+        "http://localhost:3000",
+        "http://localhost:3001",
+    ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -50,6 +55,10 @@ app.include_router(payments.router)
 app.include_router(users.router)
 app.include_router(affiliates.router)
 app.include_router(admin.router)
+app.include_router(drives.router)
+app.include_router(email_triggers.router)
+app.include_router(notifications.router)
+app.include_router(b2b.router)
 
 
 # ── Health Check ─────────────────────────────────────────────────────────────
@@ -94,3 +103,51 @@ async def interview_websocket(
 async def test_page():
     """Simple server test — Phase 07 audio test page backend."""
     return {"message": "Backend is running", "version": "1.0.0"}
+
+
+# ── STT Debug Endpoint ────────────────────────────────────────────────────────
+@app.post("/api/test/stt")
+async def test_stt_endpoint(request: dict | None = None):
+    """
+    Test Sarvam STT directly by accepting base64 audio in JSON.
+    Use from browser console or Postman for debugging:
+
+    fetch('/api/test/stt', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ audio_base64: '<base64>', audio_format: 'audio/webm' })
+    }).then(r => r.json()).then(console.log)
+    """
+    from services.sarvam_stt import speech_to_text
+    import base64 as _b64
+
+    if not request:
+        return {"error": "Send JSON body with audio_base64 and audio_format"}
+
+    audio_base64 = request.get("audio_base64", "")
+    audio_format = request.get("audio_format", "audio/webm;codecs=opus")
+
+    if not audio_base64:
+        return {"success": False, "error": "No audio_base64 provided"}
+
+    audio_bytes = _b64.b64decode(audio_base64)
+    print(f"[TEST STT] Testing {len(audio_bytes)} bytes, format={audio_format}")
+
+    result = await speech_to_text(audio_base64, audio_format)
+
+    if result:
+        return {
+            "success": True,
+            "transcript": result.transcript,
+            "language": result.language_code,
+            "wpm": result.wpm,
+            "filler_words": result.filler_words,
+            "confidence": result.confidence,
+            "audio_size_bytes": len(audio_bytes),
+        }
+    else:
+        return {
+            "success": False,
+            "error": "STT returned None — check backend terminal logs for [STT DEBUG] lines",
+            "audio_size_bytes": len(audio_bytes),
+        }

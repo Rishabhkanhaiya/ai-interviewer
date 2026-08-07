@@ -44,6 +44,7 @@ export default function LandingPage() {
             <a href="#features" className="hover:text-indigo-600 transition-colors">Features</a>
             <a href="#pricing" className="hover:text-indigo-600 transition-colors">Pricing</a>
             <a href="#how-it-works" className="hover:text-indigo-600 transition-colors">How it works</a>
+            <Link href="/blog" className="hover:text-indigo-600 transition-colors">Blog</Link>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/auth" className="text-sm text-gray-600 hover:text-indigo-600 transition-colors">Sign in</Link>
@@ -269,6 +270,9 @@ export default function LandingPage() {
             <span className="text-gray-600 font-normal text-sm ml-1">— Made in Pune, India 🇮🇳</span>
           </div>
           <div className="flex items-center gap-6 text-sm">
+            <Link href="/blog" className="hover:text-white transition-colors">Blog</Link>
+            <Link href="/become-affiliate" className="hover:text-white transition-colors">Affiliates</Link>
+            <Link href="/help" className="hover:text-white transition-colors">Help & FAQ</Link>
             <a href="#features" className="hover:text-white transition-colors">Features</a>
             <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
             <Link href="/auth" className="hover:text-white transition-colors">Sign in</Link>

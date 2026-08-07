@@ -76,6 +76,7 @@ COMPANY_DISPLAY_NAMES = {
     "startup_react": "D2C Startup",
     "faang": "FAANG-Style",
     "hr_behavioral": "HR Behavioral",
+    "all_in_one": "All-In-One General",
     "custom": "Custom Interview",
 }
 
@@ -141,6 +142,12 @@ async def start_session(
     persona_name = get_persona_for_round(body.round_type.value, body.company.value)
     persona = VOICE_PERSONAS[persona_name]
 
+    # Parse resume if present
+    parsed_resume = None
+    if body.resume_text:
+        from services.resume_parser import parse_resume_to_json
+        parsed_resume = await parse_resume_to_json(body.resume_text, body.role.value)
+
     # Save session config to Redis for the WebSocket to pick up
     from db.redis_client import set_session_state
     session_config = {
@@ -148,6 +155,7 @@ async def start_session(
         "round_type": body.round_type.value,
         "language_pref": body.language_pref.value,
         "resume_text": body.resume_text,
+        "parsed_resume": parsed_resume,
     }
     await set_session_state(session_id, session_config)
 
@@ -170,13 +178,13 @@ async def list_sessions(
     supabase = get_supabase()
     result = (
         supabase.table("sessions")
-        .select("*")
+        .select("*", count="exact")
         .eq("user_id", user_id)
         .order("started_at", desc=True)
         .range(offset, offset + limit - 1)
         .execute()
     )
-    return {"sessions": result.data or [], "total": len(result.data or [])}
+    return {"sessions": result.data or [], "total": result.count or 0}
 
 
 @router.get("/{session_id}/scorecard")

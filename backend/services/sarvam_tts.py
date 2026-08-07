@@ -12,31 +12,25 @@ SARVAM_TTS_URL = "https://api.sarvam.ai/text-to-speech"
 # Voice personas — map to Sarvam voice IDs
 VOICE_PERSONAS = {
     "raj_technical": {
-        "speaker": "aditya",          # Professional male
-        "display_name": "Raj",
+        "speaker": "ratan",             # Sharp articulation male
+        "display_name": "Ratan",
         "role_label": "Senior Engineer",
-        "target_language_code": "hi-IN",
-        "pitch": -0.1,
-        "pace": 1.0,
-        "loudness": 1.5,
+        "target_language_code": "en-IN",
+        "pace": 0.80,                   # Slower pace
     },
     "priya_hr": {
-        "speaker": "priya",           # Warm female
+        "speaker": "priya",             # Warm female
         "display_name": "Priya",
         "role_label": "HR Manager",
-        "target_language_code": "hi-IN",
-        "pitch": 0.1,
-        "pace": 0.95,
-        "loudness": 1.5,
+        "target_language_code": "en-IN",
+        "pace": 0.80,
     },
     "arjun_startup": {
-        "speaker": "rahul",            # Direct, energetic male
+        "speaker": "ratan",             # Sharp articulation male
         "display_name": "Arjun",
         "role_label": "Startup Founder",
-        "target_language_code": "hi-IN",
-        "pitch": 0.0,
-        "pace": 1.05,
-        "loudness": 1.6,
+        "target_language_code": "en-IN",
+        "pace": 0.80,
     },
 }
 
@@ -63,37 +57,34 @@ def split_into_sentences(text: str) -> list[str]:
 async def text_to_speech_sentence(
     text: str,
     persona: str = "raj_technical",
-    client: Optional[httpx.AsyncClient] = None
+    client: Optional[httpx.AsyncClient] = None,
+    pace_override: Optional[float] = None,
 ) -> Optional[str]:
     """
-    Convert a single sentence to speech via Sarvam REST TTS.
-    
-    Returns: Base64-encoded WAV string, or None on failure.
-    
-    Uses REST API (not WebSocket streaming) for reliability.
-    Each sentence is a complete, decodable audio file.
+    Convert a single sentence to speech using Sarvam REST API.
+    Returns base64 WAV string or None on failure.
     """
+    should_close = False
+    if client is None:
+        client = httpx.AsyncClient(timeout=15.0)
+        should_close = True
+        
     voice_config = VOICE_PERSONAS.get(persona, VOICE_PERSONAS["raj_technical"])
-    
+        
     payload = {
         "inputs": [text],
-        "target_language_code": "hi-IN", # Force hi-IN for all
+        "target_language_code": voice_config["target_language_code"],
         "speaker": voice_config["speaker"],
-        "pace": voice_config.get("pace", 1.0),
-        "speech_sample_rate": 8000,
+        "pace": pace_override if pace_override is not None else voice_config.get("pace", 0.82),
+        "speech_sample_rate": 22050,
         "enable_preprocessing": True,
         "model": "bulbul:v3"
     }
     
     headers = {
-        "api-subscription-key": SARVAM_API_KEY,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "api-subscription-key": SARVAM_API_KEY
     }
-    
-    should_close = False
-    if client is None:
-        client = httpx.AsyncClient(timeout=15.0)
-        should_close = True
     
     try:
         response = await client.post(
@@ -121,7 +112,8 @@ async def text_to_speech_sentence(
 
 async def text_to_speech_full(
     text: str,
-    persona: str = "raj_technical"
+    persona: str = "raj_technical",
+    pace_override: Optional[float] = None,
 ) -> list[str]:
     """
     Convert full text (multiple sentences) to speech.
@@ -135,20 +127,19 @@ async def text_to_speech_full(
         # Fallback if no punctuation
         sentences = [text]
     
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        # Request all sentences in parallel
-        tasks = [
-            text_to_speech_sentence(sentence, persona, client)
-            for sentence in sentences
-        ]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-    
-    # Filter out failures, return successful audio
     audio_buffers = []
-    for i, result in enumerate(results):
-        if isinstance(result, str):
-            audio_buffers.append(result)
-        else:
-            print(f"[TTS] Sentence {i} failed: {result}")
     
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # Process sequentially to prevent API throttling
+        for i, sentence in enumerate(sentences):
+            result = await text_to_speech_sentence(sentence, persona, client, pace_override=pace_override)
+            if isinstance(result, str):
+                audio_buffers.append(result)
+            else:
+                print(f"[TTS] Sentence {i+1} failed: {result}")
+            
+            # Small delay between requests to be safe with rate limits
+            if i < len(sentences) - 1:
+                await asyncio.sleep(0.1)
+                
     return audio_buffers

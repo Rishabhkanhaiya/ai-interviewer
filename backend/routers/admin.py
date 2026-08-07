@@ -7,6 +7,8 @@ from db.supabase_client import get_supabase
 from db.redis_client import get_redis
 from config import get_settings
 from routers.sessions import get_user_id_from_jwt
+from routers.affiliates import get_tier
+import re
 
 settings = get_settings()
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -98,3 +100,28 @@ async def approve_payout(payout_id: str, authorization: str = Header(...)):
             supabase.table("affiliates").update({"total_paid_paise": new_paid}).eq("id", payout.data["affiliate_id"]).execute()
 
     return {"status": "paid"}
+
+
+@router.get("/affiliate-applications")
+async def list_affiliate_applications(status: str = "pending", authorization: str = Header(...)):
+    await require_admin(authorization)
+    return get_supabase().table("affiliate_applications").select("*, users(name,email)").eq("status", status).order("created_at").execute().data or []
+
+
+@router.post("/affiliate-applications/{application_id}/approve")
+async def approve_affiliate_application(application_id: str, authorization: str = Header(...)):
+    await require_admin(authorization)
+    supabase = get_supabase()
+    application = supabase.table("affiliate_applications").select("*, users(name)").eq("id", application_id).single().execute()
+    if not application.data or application.data["status"] != "pending":
+        raise HTTPException(status_code=404, detail="Pending application not found")
+    a = application.data
+    base = "FL-" + re.sub(r"[^A-Za-z]", "", a["users"]["name"] or "PARTNER").upper()[:8]
+    code, suffix = base, 1
+    while supabase.table("affiliates").select("id").eq("code", code).execute().data:
+        code, suffix = f"{base}{suffix}", suffix + 1
+    existing = supabase.table("affiliates").select("id").eq("user_id", a["user_id"]).execute()
+    if not existing.data:
+        supabase.table("affiliates").insert({"user_id": a["user_id"], "code": code, "affiliate_type": "freelancer", "status": "approved"}).execute()
+    supabase.table("affiliate_applications").update({"status": "approved", "reviewed_at": "now()"}).eq("id", application_id).execute()
+    return {"status": "approved", "code": code}

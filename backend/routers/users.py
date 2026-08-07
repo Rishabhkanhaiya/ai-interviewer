@@ -43,12 +43,19 @@ async def get_profile(authorization: str = Header(...)):
 @router.put("/profile")
 async def update_profile(body: UpdateProfileRequest, authorization: str = Header(...)):
     """Update user profile fields."""
-    user_id = get_user_id_from_jwt(authorization)
+    payload = get_user_jwt_payload(authorization)
+    user_id = payload.get("sub")
+    email = payload.get("email", "")
+    
     supabase = get_supabase()
     update_data = body.model_dump(exclude_none=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
-    supabase.table("users").update(update_data).eq("id", user_id).execute()
+        
+    update_data["id"] = user_id
+    update_data["email"] = email
+    
+    supabase.table("users").upsert(update_data).execute()
     return {"status": "ok"}
 
 
@@ -88,17 +95,18 @@ async def get_pack_status(authorization: str = Header(...)):
     if not active_pack:
         return PackStatusResponse(has_active_pack=False)
 
-    # Get Redis values for freshest counts
+    # Get actual rounds used by counting non-abandoned sessions in Supabase
+    sessions_res = supabase.table("sessions").select("id", count="exact").eq("pack_id", active_pack["id"]).neq("status", "abandoned").execute()
+    rounds_used = sessions_res.count or 0
+
+    # Get Redis values for freshest minutes
     redis_minutes = 0.0
-    redis_rounds = 0
     try:
         redis_minutes = await get_pack_minutes_used(active_pack["id"])
-        redis_rounds = await get_pack_rounds_used(active_pack["id"])
     except Exception as e:
         print(f"[Pack Status] Redis connection error, falling back to Supabase counts: {e}")
 
     minutes_used = max(float(active_pack["minutes_used"]), redis_minutes)
-    rounds_used = max(int(active_pack["rounds_used"]), redis_rounds)
 
     return PackStatusResponse(
         has_active_pack=True,
@@ -114,3 +122,20 @@ async def get_pack_status(authorization: str = Header(...)):
             has_active_pack=True,
         ),
     )
+
+@router.get("/leaderboard")
+async def get_leaderboard(limit: int = 10, authorization: str = Header(...)):
+    """Get top users by best_score."""
+    # verify user
+    get_user_id_from_jwt(authorization)
+    
+    supabase = get_supabase()
+    result = (
+        supabase.table("users")
+        .select("id, name, college, best_score, current_streak")
+        .gt("best_score", 0)
+        .order("best_score", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return {"leaderboard": result.data or []}

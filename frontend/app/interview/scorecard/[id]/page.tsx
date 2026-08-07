@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { apiClient } from '@/lib/api'
+import NpsSurvey from '@/components/NpsSurvey'
+import { VictoryPopup } from '@/components/VictoryPopup'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface AnswerRecord {
@@ -36,8 +38,13 @@ interface SessionRecord {
   overall_score: number
   wpm_avg: number
   filler_total: number
-  star_weakest: string
-  top_improvements: string[]
+  error_analysis?: {
+    quote: string
+    mistake: string
+    fix: string
+    better_example?: string
+  }[]
+  comprehensive_summary?: string
   status: string
 }
 
@@ -94,11 +101,27 @@ export default function ScorecardPage() {
   const [activeAnswer, setActiveAnswer] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
+  const [showNps, setShowNps] = useState(false)
+  const [showVictory, setShowVictory] = useState(true)
+
   useEffect(() => {
     const load = async () => {
       try {
         const { data } = await apiClient.getScorecard(sessionId)
         setScorecard(data as Scorecard)
+
+        // NPS Logic
+        if (typeof window !== 'undefined') {
+          const visits = parseInt(localStorage.getItem('scorecard_visits') || '0')
+          const newVisits = visits + 1
+          localStorage.setItem('scorecard_visits', newVisits.toString())
+          const hasSeenNps = localStorage.getItem('hasSeenNps') === 'true'
+          
+          if (newVisits === 3 && !hasSeenNps) {
+            setTimeout(() => setShowNps(true), 3000)
+            localStorage.setItem('hasSeenNps', 'true')
+          }
+        }
       } catch {
         setError('Scorecard not found or you do not have access.')
       } finally {
@@ -157,6 +180,11 @@ export default function ScorecardPage() {
           .print-break { page-break-before: always; }
         }
       `}</style>
+      
+      {showNps && <NpsSurvey onDismiss={() => setShowNps(false)} />}
+      {showVictory && !showNps && overallScore >= 80 && (
+        <VictoryPopup score={overallScore} onDismiss={() => setShowVictory(false)} />
+      )}
 
       {/* Top Bar */}
       <div className="bg-white border-b border-black/8 px-6 py-4 flex items-center justify-between no-print">
@@ -243,13 +271,7 @@ export default function ScorecardPage() {
               <h2 className="font-semibold text-gray-900">STAR Analysis</h2>
               <p className="text-xs text-gray-500 mt-0.5">Average scores across all your answers</p>
             </div>
-            {session.star_weakest && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
-                <span className="text-xs text-amber-700 font-medium">
-                  Weakest: {session.star_weakest} component
-                </span>
-              </div>
-            )}
+
           </div>
           <div className="space-y-3">
             <StarBar label="S" value={avgStarS} />
@@ -258,21 +280,42 @@ export default function ScorecardPage() {
             <StarBar label="R" value={avgStarR} />
           </div>
           <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500">
-            <strong>S</strong> = Situation &nbsp;·&nbsp; <strong>T</strong> = Task &nbsp;·&nbsp; <strong>A</strong> = Action &nbsp;·&nbsp; <strong>R</strong> = Result
+            <strong>S</strong> = Technical Depth &nbsp;·&nbsp; <strong>T</strong> = Comm Clarity &nbsp;·&nbsp; <strong>A</strong> = Structure &nbsp;·&nbsp; <strong>R</strong> = Specificity
           </div>
         </div>
 
-        {/* ── Top Improvements ─────────────────────────────────────────────── */}
-        {session.top_improvements?.length > 0 && (
+        {/* ── Comprehensive Summary ─────────────────────────────────────────────── */}
+        {session.comprehensive_summary && (
+          <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6 mb-6">
+            <h2 className="font-semibold text-gray-900 mb-2">Overall Performance Summary</h2>
+            <p className="text-sm text-gray-700 leading-relaxed">{session.comprehensive_summary}</p>
+          </div>
+        )}
+
+        {/* ── Error Analysis ─────────────────────────────────────────────── */}
+        {session.error_analysis && session.error_analysis.length > 0 && (
           <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6">
-            <h2 className="font-semibold text-gray-900 mb-4">Top 3 improvements for next time</h2>
-            <div className="space-y-3">
-              {session.top_improvements.map((tip, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                    {i + 1}
+            <h2 className="font-semibold text-gray-900 mb-4">Critical Mistakes & Fixes</h2>
+            <div className="space-y-4">
+              {session.error_analysis.map((err, i) => (
+                <div key={i} className="border border-red-100 bg-red-50/50 rounded-xl p-4">
+                  <div className="mb-2">
+                    <span className="text-xs font-bold text-red-600 uppercase tracking-wider">Mistake {i + 1}</span>
                   </div>
-                  <p className="text-sm text-gray-700 leading-relaxed">{tip}</p>
+                  <div className="bg-white border border-gray-100 rounded-lg p-3 text-sm text-gray-600 italic mb-3">
+                    "{err.quote}"
+                  </div>
+                  <p className="text-sm text-gray-800 font-medium mb-1">Why it failed:</p>
+                  <p className="text-sm text-gray-600 mb-3">{err.mistake}</p>
+                  
+                  <p className="text-sm text-emerald-700 font-medium mb-1">How to fix it:</p>
+                  <p className="text-sm text-emerald-600 mb-3">{err.fix}</p>
+                  
+                  {err.better_example && (
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-sm text-emerald-800">
+                      <strong>Better Example:</strong> "{err.better_example}"
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -346,7 +389,7 @@ export default function ScorecardPage() {
                     <div className="text-xs font-medium text-gray-500">STAR Scores</div>
                     <div className="grid grid-cols-4 gap-2">
                       {(['star_s', 'star_t', 'star_a', 'star_r'] as const).map((key, idx) => {
-                        const labels = ['Situation', 'Task', 'Action', 'Result']
+                        const labels = ['Technical', 'Clarity', 'Structure', 'Examples']
                         const val = answers[activeAnswer][key] || 0
                         return (
                           <div key={key} className={`p-2 rounded-lg text-center ${starColor(val)}`}>
@@ -391,9 +434,7 @@ export default function ScorecardPage() {
         <div className="bg-indigo-600 rounded-2xl p-6 text-center text-white no-print">
           <h3 className="font-semibold text-lg mb-1">Ready to improve on your weak areas?</h3>
           <p className="text-indigo-200 text-sm mb-4">
-            {session.star_weakest
-              ? `Your ${session.star_weakest} component needs work. Practice a focused round now.`
-              : 'Practice another round to improve your score.'}
+            Practice another round to improve your score.
           </p>
           <Link
             href="/interview/setup"

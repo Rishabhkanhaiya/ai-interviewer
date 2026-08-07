@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { apiClient, type PackStatus, type Session } from '@/lib/api'
+import { PushNotificationManager } from '@/components/PushNotificationManager'
 
 const COMPANY_LABELS: Record<string, string> = {
   tcs_nqt: 'TCS NQT', infosys: 'Infosys', wipro: 'Wipro',
@@ -22,7 +23,10 @@ export default function DashboardPage() {
   const router = useRouter()
   const [packStatus, setPackStatus] = useState<PackStatus | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
+  const [totalSessions, setTotalSessions] = useState(0)
   const [userName, setUserName] = useState<string>('')
+  const [profile, setProfile] = useState<any>(null)
+  const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -31,14 +35,18 @@ export default function DashboardPage() {
       if (!session) { router.push('/auth'); return }
 
       try {
-        const [packRes, sessionsRes, profileRes] = await Promise.all([
+        const [packRes, sessionsRes, profileRes, leaderboardRes] = await Promise.all([
           apiClient.getPackStatus(),
           apiClient.listSessions(3),
           apiClient.getProfile(),
+          apiClient.getLeaderboard(),
         ])
         setPackStatus(packRes.data)
         setSessions(sessionsRes.data.sessions)
+        setTotalSessions(sessionsRes.data.total || 0)
         setUserName(profileRes.data.name || '')
+        setProfile(profileRes.data)
+        setLeaderboard(leaderboardRes.data.leaderboard || [])
       } catch (err: unknown) {
         const status = (err as { response?: { status?: number } })?.response?.status
         if (status === 404) {
@@ -67,6 +75,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      <PushNotificationManager />
       {/* Sidebar */}
       <aside className="w-60 bg-white border-r border-black/8 flex flex-col py-6 px-4 gap-1 shrink-0">
         <div className="flex items-center gap-2 px-3 mb-6">
@@ -84,6 +93,8 @@ export default function DashboardPage() {
           { href: '/dashboard/history', label: 'My Sessions', icon: '📋' },
           { href: '/buy', label: 'Buy Pack', icon: '💳' },
           { href: '/affiliate', label: 'Refer & Earn', icon: '🔗' },
+          { href: '/blog', label: 'Blog & Resources', icon: '📝' },
+          { href: '/help', label: 'Help & FAQ', icon: '❓' },
           { href: '/settings', label: 'Settings', icon: '⚙️' },
         ].map(item => (
           <Link key={item.href} href={item.href}
@@ -111,6 +122,36 @@ export default function DashboardPage() {
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">Ready for your next mock interview?</p>
           </div>
+
+          {/* Stats Row */}
+          {profile && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white rounded-xl border border-black/8 p-4 shadow-sm flex flex-col justify-center" title="Continuous days of practice">
+                <div className="text-sm text-gray-500 font-medium flex items-center gap-2">
+                  <span>🔥</span> Current Streak
+                </div>
+                <div className="text-2xl font-bold text-gray-900 mt-1">{profile.current_streak || 0} days</div>
+              </div>
+              <div className="bg-white rounded-xl border border-black/8 p-4 shadow-sm flex flex-col justify-center" title="Your all-time longest practice streak">
+                <div className="text-sm text-gray-500 font-medium flex items-center gap-2">
+                  <span>⭐</span> Longest Streak
+                </div>
+                <div className="text-2xl font-bold text-gray-900 mt-1">{profile.longest_streak || 0} days</div>
+              </div>
+              <div className="bg-white rounded-xl border border-black/8 p-4 shadow-sm flex flex-col justify-center" title="Your highest score across all completed sessions">
+                <div className="text-sm text-gray-500 font-medium flex items-center gap-2">
+                  <span>🏆</span> Personal Best
+                </div>
+                <div className="text-2xl font-bold text-gray-900 mt-1">{profile.best_score || 0}/100</div>
+              </div>
+              <div className="bg-white rounded-xl border border-black/8 p-4 shadow-sm flex flex-col justify-center">
+                <div className="text-sm text-gray-500 font-medium flex items-center gap-2">
+                  <span>🎤</span> Sessions Taken
+                </div>
+                <div className="text-2xl font-bold text-gray-900 mt-1">{totalSessions}</div>
+              </div>
+            </div>
+          )}
 
           {/* Pack Status Banner */}
           {packStatus?.has_active_pack && packStatus.pack ? (
@@ -206,6 +247,47 @@ export default function DashboardPage() {
                         className="text-xs text-indigo-600 hover:text-indigo-700">
                         View →
                       </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Top 10 Leaderboard */}
+          <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                <span>🏆</span> Top 10 Leaderboard
+              </h2>
+            </div>
+            
+            {leaderboard.length === 0 ? (
+              <div className="text-center py-8 text-sm text-gray-400">
+                No scores yet. Be the first to get on the board!
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {leaderboard.map((user, idx) => (
+                  <div key={user.id} className="flex items-center gap-4 p-3 rounded-xl border border-black/5 hover:bg-gray-50 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold shrink-0 text-sm">
+                      #{idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {user.name || 'Anonymous User'}
+                      </div>
+                      <div className="text-xs text-gray-400 truncate">
+                        {user.college || 'No college specified'}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <div className="text-sm font-bold text-gray-900">{user.best_score}/100</div>
+                      {user.current_streak > 0 && (
+                        <div className="text-xs font-medium text-orange-500">
+                          🔥 {user.current_streak} streak
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

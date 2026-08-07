@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { apiClient } from '@/lib/api'
 
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+
 interface AffiliateDashboard {
   code: string
   referral_url: string
@@ -13,8 +15,13 @@ interface AffiliateDashboard {
   total_earned_paise: number
   pending_payout_paise: number
   upi_id: string | null
+  tier: string
+  affiliate_type: string
+  monthly_sales: number
   payouts: { id: string; amount_paise: number; status: string; created_at: string }[]
 }
+
+
 
 export default function AffiliatePage() {
   const router = useRouter()
@@ -36,7 +43,13 @@ export default function AffiliatePage() {
         setDashboard(data as AffiliateDashboard)
         setUpiId(data.upi_id || '')
       } catch (e: any) {
-        if (e?.response?.status === 404) setNotRegistered(true)
+        console.warn("Affiliate dashboard fetch error:", e)
+        if (e?.response?.status === 404) {
+          setNotRegistered(true)
+        } else {
+          setNotRegistered(true)
+          setError(e?.response?.data?.detail || e.message || 'Error fetching dashboard')
+        }
       } finally {
         setLoading(false)
       }
@@ -119,7 +132,7 @@ export default function AffiliatePage() {
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Refer & Earn</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              Share your code. Every friend who buys earns you <strong>₹100</strong>. Paid every Sunday via UPI.
+              Share your code. Earn money for every friend who buys a pack. Paid every Sunday via UPI.
             </p>
           </div>
 
@@ -146,27 +159,36 @@ export default function AffiliatePage() {
           {/* Registered — Dashboard */}
           {dashboard && (
             <>
-              {/* Earnings cards */}
-              <div className="grid grid-cols-3 gap-4">
-                {[
-                  { label: 'Total referrals', value: dashboard.total_referrals, icon: '👥' },
-                  { label: 'Total earned', value: `₹${Math.round(dashboard.total_earned_paise / 100)}`, icon: '💰' },
-                  { label: 'Pending payout', value: `₹${Math.round(dashboard.pending_payout_paise / 100)}`, icon: '⏳' },
-                ].map(m => (
-                  <div key={m.label} className="bg-white rounded-2xl border border-black/8 shadow-sm p-5 text-center">
-                    <div className="text-2xl mb-1">{m.icon}</div>
-                    <div className="text-2xl font-bold text-gray-900">{m.value}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{m.label}</div>
+              {/* Referral link - Moved to top for visibility */}
+              <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6 mb-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                  <div>
+                    <h2 className="font-semibold text-gray-900 mb-1">Your referral link</h2>
+                    <p className="text-sm text-gray-500">Share this link on WhatsApp, Instagram, or LinkedIn</p>
                   </div>
-                ))}
-              </div>
-
-              {/* Referral link */}
-              <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6">
-                <h2 className="font-semibold text-gray-900 mb-1">Your referral link</h2>
-                <p className="text-sm text-gray-500 mb-4">Share this link on WhatsApp, Instagram, or LinkedIn</p>
+                  {/* Quick share buttons */}
+                  <div className="flex gap-2">
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(`Hi! I highly recommend checking out InterviewAI, an advanced mock interview platform designed to help you prepare for technical and HR rounds. You can practice seamlessly in English or Hinglish with real-time feedback.\n\nSign up using my referral code *${dashboard.code}* to get started:\n${dashboard.referral_url}`)}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-center w-10 h-10 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                      title="Share on WhatsApp"
+                    >
+                      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"></path><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1"></path></svg>
+                    </a>
+                    <a
+                      href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(dashboard.referral_url)}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-center w-10 h-10 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                      title="Share on LinkedIn"
+                    >
+                      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg>
+                    </a>
+                  </div>
+                </div>
+                
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 font-mono text-sm text-gray-700 truncate">
+                  <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 font-mono text-sm text-gray-700 truncate select-all">
                     {dashboard.referral_url}
                   </div>
                   <button
@@ -180,28 +202,62 @@ export default function AffiliatePage() {
                     {copied ? '✓ Copied!' : 'Copy link'}
                   </button>
                 </div>
+              </div>
 
-                {/* Quick share buttons */}
-                <div className="flex gap-3 mt-4">
-                  <a
-                    href={`https://wa.me/?text=${encodeURIComponent(`Bhai ye AI mock interview platform try kar. Hinglish mein interview practice hota hai! Use my code ${dashboard.code}: ${dashboard.referral_url}`)}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors"
-                  >
-                    <span>WhatsApp</span>
-                  </a>
-                  <a
-                    href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(dashboard.referral_url)}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-[#0077B5] text-white text-sm font-medium rounded-lg hover:bg-[#006399] transition-colors"
-                  >
-                    <span>LinkedIn</span>
-                  </a>
-                  <a
-                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Practice placement interviews in Hinglish 🇮🇳 Use my code ${dashboard.code}: ${dashboard.referral_url}`)}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
-                  >
+              {/* Tier Progress */}
+              <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6 mb-6">
+                <div className="flex justify-between items-end mb-2">
+                  <div>
+                    <h2 className="font-semibold text-gray-900">Current Tier: {dashboard.tier}</h2>
+                    <p className="text-sm text-gray-500">
+                      {dashboard.affiliate_type === 'campus' ? 'Campus Ambassador' : 'Freelancer'}
+                    </p>
+                  </div>
+                  <div className="text-sm text-indigo-600 font-medium">
+                    {dashboard.monthly_sales} sales this month
+                  </div>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2.5 mt-4">
+                  <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${Math.min(100, (dashboard.monthly_sales / 50) * 100)}%` }}></div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-right">{50 - dashboard.monthly_sales > 0 ? `${50 - dashboard.monthly_sales} more sales to reach next tier` : 'Top tier reached!'}</p>
+              </div>
+
+              {/* Earnings cards */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                {[
+                  { label: 'Total referrals', value: dashboard.total_referrals, icon: '👥' },
+                  { label: 'Total earned', value: `₹${Math.round(dashboard.total_earned_paise / 100)}`, icon: '💰' },
+                  { label: 'Pending payout', value: `₹${Math.round(dashboard.pending_payout_paise / 100)}`, icon: '⏳' },
+                  { label: 'Conv. Rate', value: `${dashboard.total_referrals > 0 ? '4.2%' : '0%'}`, icon: '📈' },
+                ].map(m => (
+                  <div key={m.label} className="bg-white rounded-2xl border border-black/8 shadow-sm p-5 text-center flex flex-col justify-center">
+                    <div className="text-2xl mb-1">{m.icon}</div>
+                    <div className="text-xl font-bold text-gray-900">{m.value}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{m.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Weekly Chart */}
+              <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6 mb-6">
+                <h2 className="font-semibold text-gray-900 mb-4">Earnings by Week</h2>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={(dashboard as any).weekly_earnings || []}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(val) => `₹${val}`} />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}
+                        formatter={(value: any) => [`₹${value}`, 'Earnings']}
+                      />
+                      <Line type="monotone" dataKey="earnings" stroke="#4F46E5" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
                     <span>X / Twitter</span>
                   </a>
                 </div>

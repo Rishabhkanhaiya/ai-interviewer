@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     secret_key: str = "interviewai-dev-secret-change-in-production"
     environment: str = "development"
     frontend_url: str = "http://localhost:3000"
+    affiliate_portal_url: str = "http://localhost:3001"
+    public_app_url: str = "http://localhost:3000"
+    affiliate_marketing_kit_url: str = ""
     admin_emails: str = "your_email@example.com"
 
     # Hard Caps (from spec §2)

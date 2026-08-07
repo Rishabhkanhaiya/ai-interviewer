@@ -30,7 +30,7 @@ function BuyPageInner() {
 
   const [selectedPack, setSelectedPack] = useState(defaultPack)
   const [affiliateCode, setAffiliateCode] = useState(searchParams.get('ref') || '')
-  const [affiliateValid, setAffiliateValid] = useState<string | null>(null)
+  const [affiliateValid, setAffiliateValid] = useState<{valid: boolean, msg: string} | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,11 +41,11 @@ function BuyPageInner() {
         try {
           const res = await apiClient.validateAffiliate(affiliateCode)
           if (res.data.valid) {
-            setAffiliateValid(`Applied! Referred by ${res.data.referrer_name}`)
+            setAffiliateValid({ valid: true, msg: `Applied! Referred by ${res.data.referrer_name}` })
           } else {
-            setAffiliateValid(null)
+            setAffiliateValid({ valid: false, msg: 'Invalid referral code' })
           }
-        } catch { setAffiliateValid(null) }
+        } catch { setAffiliateValid({ valid: false, msg: 'Invalid referral code' }) }
       } else {
         setAffiliateValid(null)
       }
@@ -160,10 +160,14 @@ function BuyPageInner() {
               value={affiliateCode}
               onChange={e => setAffiliateCode(e.target.value.toUpperCase())}
               placeholder="e.g. RAHUL2025"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 uppercase"
+              className={`w-full px-4 py-3 bg-gray-50 border rounded-lg text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 uppercase transition-colors ${
+                affiliateValid ? (affiliateValid.valid ? 'border-emerald-500 bg-emerald-50' : 'border-red-400 bg-red-50') : 'border-gray-200'
+              }`}
             />
             {affiliateValid && (
-              <p className="mt-1.5 text-xs text-emerald-600">✓ {affiliateValid}</p>
+              <p className={`mt-1.5 text-xs font-medium ${affiliateValid.valid ? 'text-emerald-600' : 'text-red-500'}`}>
+                {affiliateValid.valid ? `✓ ${affiliateValid.msg}` : `✕ ${affiliateValid.msg}`}
+              </p>
             )}
           </div>
 
@@ -191,9 +195,25 @@ function BuyPageInner() {
             {loading ? 'Opening payment...' : `Pay ₹${price} →`}
           </button>
 
-          <p className="text-xs text-gray-400 text-center">
-            Secure payment via Razorpay. No subscription, no renewal. One-time charge only.
-          </p>
+          <div className="flex flex-col items-center gap-3 mt-4">
+            <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+              <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              100% Secure Payment via Razorpay
+            </div>
+            
+            <p className="text-xs text-gray-400 text-center">
+              No subscription, no renewal. One-time charge only.<br />
+              All purchases include a GST invoice.
+            </p>
+            
+            <div className="flex items-center gap-4 text-xs mt-2">
+              <Link href="/help#refunds" className="text-gray-400 hover:text-gray-700 transition-colors">Refund Policy</Link>
+              <span className="text-gray-300">•</span>
+              <Link href="/help#terms" className="text-gray-400 hover:text-gray-700 transition-colors">Terms of Service</Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>

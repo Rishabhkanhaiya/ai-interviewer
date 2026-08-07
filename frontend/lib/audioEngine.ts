@@ -1,91 +1,91 @@
 /**
  * AudioQueueManager
- * 
- * Manages sequential playback of TTS audio buffers.
- * Each sentence arrives as a complete base64 WAV string.
- * Sentences are decoded and queued for seamless sequential playback.
- * 
- * Industry standard: Web Audio API AudioContext with BufferSource nodes.
+ *
+ * Fix 3: hasFiredPlaybackStart tracks whether ai_speaking has been fired for
+ * the current utterance. Fires on the FIRST chunk, not the last.
+ * Reset on stopAll() (barge-in) so next utterance re-fires correctly.
+ *
+ * Fix 2: AudioContext is created lazily inside resume(), which must be called
+ * synchronously from a user gesture handler — never in a useEffect.
  */
 export class AudioQueueManager {
   private context: AudioContext | null = null;
   private queue: AudioBuffer[] = [];
+  private nextStartTime = 0;           // schedules chunks gaplessly
   private currentSource: AudioBufferSourceNode | null = null;
-  private isPlaying: boolean = false;
-  private isStopped: boolean = false;
+  private isPlaying = false;
+  private isStopped = false;
+  private hasFiredPlaybackStart = false;  // Fix 3
+
   private onPlaybackStart?: () => void;
   private onPlaybackEnd?: () => void;
 
   constructor(
     onPlaybackStart?: () => void,
-    onPlaybackEnd?: () => void
+    onPlaybackEnd?: () => void,
   ) {
     this.onPlaybackStart = onPlaybackStart;
     this.onPlaybackEnd = onPlaybackEnd;
-    this.initContext();
-  }
-
-  private initContext() {
-    // AudioContext must be created after user gesture (browser policy)
-    // Call this inside a click handler if needed
-    this.context = new AudioContext();
+    // Fix 2: Do NOT create AudioContext here.
+    // Browser blocks audio if context is created before a user gesture.
   }
 
   /**
-   * Resume context if suspended (browser requires user gesture first)
-   * Call this on first user interaction.
+   * Fix 2 — call this synchronously inside the click handler that starts the interview.
+   * Creates the AudioContext if it doesn't exist yet, then resumes it.
    */
-  async resume() {
-    if (this.context?.state === 'suspended') {
+  async resume(): Promise<void> {
+    if (!this.context) {
+      this.context = new AudioContext();
+    }
+    if (this.context.state === 'suspended') {
       await this.context.resume();
     }
   }
 
   /**
-   * Add a complete sentence audio to the playback queue.
-   * @param base64Wav - Base64-encoded complete WAV audio from Sarvam TTS
+   * Enqueue a base64 WAV chunk for playback.
+   * Fix 3: fires onPlaybackStart (→ ai_speaking) on the FIRST chunk.
    */
   async enqueue(base64Wav: string): Promise<void> {
-    if (!this.context || this.isStopped) return;
+    if (this.isStopped) return;
+
+    // Ensure context is alive — resume if suspended
+    if (!this.context) {
+      this.context = new AudioContext();
+    }
+    if (this.context.state === 'suspended') {
+      try { await this.context.resume(); } catch { /* ignore */ }
+    }
 
     try {
-      // Decode base64 to ArrayBuffer
       const binaryStr = atob(base64Wav);
       const bytes = new Uint8Array(binaryStr.length);
       for (let i = 0; i < binaryStr.length; i++) {
         bytes[i] = binaryStr.charCodeAt(i);
       }
-      const arrayBuffer = bytes.buffer;
 
-      // Decode the complete WAV — this works perfectly because it's a complete file
-      const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
-      
-      this.queue.push(audioBuffer);
-      
-      // Start playing if not already playing
-      if (!this.isPlaying) {
-        this.playNext();
+      const audioBuffer = await this.context.decodeAudioData(bytes.buffer);
+
+      // Fix 3: fire ai_speaking on FIRST chunk, not when queue empties
+      if (!this.hasFiredPlaybackStart) {
+        this.hasFiredPlaybackStart = true;
+        this.onPlaybackStart?.();
       }
+
+      this.scheduleChunk(audioBuffer);
+
     } catch (err) {
-      console.error('[AudioEngine] Failed to decode audio buffer:', err);
+      console.error('[AudioEngine] Failed to decode chunk:', err);
     }
   }
 
-  private playNext() {
-    if (this.isStopped || !this.context || this.queue.length === 0) {
-      this.isPlaying = false;
-      this.onPlaybackEnd?.();
-      return;
-    }
+  private scheduleChunk(buffer: AudioBuffer): void {
+    if (!this.context || this.isStopped) return;
 
-    this.isPlaying = true;
-    const buffer = this.queue.shift()!;
-
-    // Create a new source node for this buffer
     const source = this.context.createBufferSource();
     source.buffer = buffer;
 
-    // Optional: add slight compression for consistent volume
     const compressor = this.context.createDynamicsCompressor();
     compressor.threshold.setValueAtTime(-24, this.context.currentTime);
     compressor.knee.setValueAtTime(30, this.context.currentTime);
@@ -96,56 +96,48 @@ export class AudioQueueManager {
     source.connect(compressor);
     compressor.connect(this.context.destination);
 
-    // When this buffer ends, play the next one
-    source.onended = () => {
-      this.currentSource = null;
-      this.playNext();
-    };
+    // Schedule gaplessly — each chunk starts exactly where the last ended
+    const startTime = Math.max(this.context.currentTime, this.nextStartTime);
+    source.start(startTime);
+    this.nextStartTime = startTime + buffer.duration;
+    this.isPlaying = true;
 
     this.currentSource = source;
-    
-    if (this.queue.length === 0) {
-      // This is the last buffer — notify when it ends
-      source.onended = () => {
-        this.currentSource = null;
+
+    source.onended = () => {
+      this.currentSource = null;
+      // Check if nothing else is scheduled (queue drained)
+      if (this.context && this.context.currentTime >= this.nextStartTime - 0.05) {
         this.isPlaying = false;
         this.onPlaybackEnd?.();
-      };
-    }
-
-    source.start(0);
-    
-    if (this.queue.length === 0 && !this.isPlaying) {
-      this.onPlaybackStart?.();
-    }
+        // NOTE: do NOT reset hasFiredPlaybackStart here — 
+        // more chunks may arrive for the same utterance.
+        // It is reset in stopAll() on barge-in.
+      }
+    };
   }
 
   /**
-   * Immediately stop all playback and clear the queue.
-   * Call this on barge-in (user starts speaking while AI is talking).
+   * Immediately stop all playback — call on barge-in.
+   * Fix 3: reset hasFiredPlaybackStart so the NEXT utterance re-fires ai_speaking.
    */
-  stopAll() {
-    try {
-      this.currentSource?.stop();
-    } catch {
-      // Source may have already ended — ignore
-    }
+  stopAll(): void {
+    try { this.currentSource?.stop(); } catch { /* already ended */ }
     this.currentSource = null;
     this.queue = [];
     this.isPlaying = false;
+    this.nextStartTime = 0;
+    this.hasFiredPlaybackStart = false;  // Fix 3 — reset for next utterance
   }
 
-  /**
-   * Full cleanup — call on component unmount.
-   */
-  async destroy() {
+  async destroy(): Promise<void> {
     this.isStopped = true;
     this.stopAll();
     await this.context?.close();
     this.context = null;
   }
 
-  get playing() {
+  get playing(): boolean {
     return this.isPlaying;
   }
 }

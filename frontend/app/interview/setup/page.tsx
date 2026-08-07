@@ -11,6 +11,7 @@ const COMPANIES = [
   { id: 'wipro',         label: 'Wipro NLTH',        sub: 'Communication, OOP', icon: '🌐' },
   { id: 'accenture',     label: 'Accenture',         sub: 'Behavioral, Verbal', icon: '🔷' },
   { id: 'startup_react', label: 'D2C Startup',       sub: 'React, Node, APIs',  icon: '🚀' },
+  { id: 'all_in_one',    label: 'All-In-One General',sub: 'Aptitude, Tech, HR',    icon: '🎯' },
   { id: 'faang',         label: 'FAANG-Style',       sub: 'DSA, System Design', icon: '⚡' },
   { id: 'hr_behavioral', label: 'HR Behavioral',     sub: 'STAR, Soft Skills',  icon: '🤝' },
   { id: 'custom',        label: 'Custom Interview',  sub: 'Describe your target', icon: '✏️' },

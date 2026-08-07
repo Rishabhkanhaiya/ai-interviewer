@@ -106,9 +106,11 @@ export default function SettingsPage() {
           { href: '/dashboard',         label: 'Dashboard',      icon: '🏠' },
           { href: '/interview/setup',   label: 'Start Interview', icon: '🎤' },
           { href: '/dashboard/history', label: 'My Sessions',    icon: '📋' },
-          { href: '/buy',               label: 'Buy Pack',        icon: '💳' },
-          { href: '/affiliate',         label: 'Refer & Earn',   icon: '🔗' },
-          { href: '/settings',          label: 'Settings',        icon: '⚙️', active: true },
+          { href: '/buy',                label: 'Buy Pack',        icon: '💳' },
+          { href: '/affiliate',          label: 'Refer & Earn',   icon: '🔗' },
+          { href: '/blog',               label: 'Blog & Resources', icon: '📝' },
+          { href: '/help',               label: 'Help & FAQ',      icon: '❓' },
+          { href: '/settings',           label: 'Settings',        icon: '⚙️', active: true },
         ].map(item => (
           <Link key={item.href} href={item.href}
             className={`flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors ${
@@ -174,6 +176,15 @@ export default function SettingsPage() {
                 >
                   {[2025, 2026, 2027, 2028].map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Target companies or roles <span className="font-normal text-gray-400">(comma separated)</span></label>
+                <input
+                  value={profile.target_companies.join(', ')}
+                  onChange={e => setProfile(p => ({ ...p, target_companies: e.target.value.split(',').map(s => s.trim()) }))}
+                  placeholder="e.g. Google, Frontend Engineer, SDE"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                />
               </div>
               <button
                 onClick={handleSave}

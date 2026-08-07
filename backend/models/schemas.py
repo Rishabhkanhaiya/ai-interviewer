@@ -20,6 +20,7 @@ class CompanyMode(str, Enum):
     STARTUP_REACT = "startup_react"
     FAANG = "faang"
     HR_BEHAVIORAL = "hr_behavioral"
+    ALL_IN_ONE = "all_in_one"
     CUSTOM = "custom"
 
 
@@ -45,9 +46,10 @@ class LanguagePref(str, Enum):
 
 class InterviewStage(str, Enum):
     INTRO = "intro"
-    WARMUP = "warmup"
-    CORE_QUESTIONS = "core_questions"
-    TECHNICAL_PUSHBACK = "technical_pushback"
+    ICEBREAKER = "icebreaker"
+    COMPANY_FIT = "company_fit"
+    TECHNICAL = "technical"
+    RESUME_GRILL = "resume_grill"
     CLOSING = "closing"
 
 
@@ -207,24 +209,34 @@ class WsSessionEndMessage(BaseModel):
 
 # ── Interview Engine Schemas ──────────────────────────────────────────────────
 
-class StarEvaluation(BaseModel):
-    star_s: int = Field(..., ge=0, le=5)  # Situation
-    star_t: int = Field(..., ge=0, le=5)  # Task
-    star_a: int = Field(..., ge=0, le=5)  # Action
-    star_r: int = Field(..., ge=0, le=5)  # Result
-    technical_score: int = Field(..., ge=0, le=10)
-    answer_complete: bool
+class DimensionEvaluation(BaseModel):
+    score: int = Field(0, ge=0, le=10)
+    criteria_met: List[str] = Field(default_factory=list)
+    criteria_missed: List[str] = Field(default_factory=list)
+    evidence_quote: str = ""
+
+class PerTurnEvaluation(BaseModel):
+    technical_depth: Optional[DimensionEvaluation] = None
+    communication_clarity: Optional[DimensionEvaluation] = None
+    star_structure: Optional[DimensionEvaluation] = None
+    specificity_of_examples: Optional[DimensionEvaluation] = None
+    answer_complete: bool = False
     follow_up_needed: bool = False
     follow_up_reason: Optional[str] = None
 
+class BeliefState(BaseModel):
+    skills_validated: List[str]
+    skills_doubted: List[str]
+    topics_to_avoid: List[str]
+    overall_impression: str
 
 class InterviewEngineResponse(BaseModel):
     """Strict JSON output schema from GPT-4o-mini. Validated by Pydantic."""
-    next_question: str
+    interviewer_response: str
     stage: InterviewStage
-    follow_up_needed: bool = False
-    follow_up_reason: Optional[str] = None
-    evaluation: Optional[StarEvaluation] = None
+    question_asked: bool
+    evaluation: Optional[PerTurnEvaluation] = None
+    belief_state: Optional[BeliefState] = None
 
 
 # ── Analytics Schemas ─────────────────────────────────────────────────────────
@@ -264,6 +276,12 @@ class AnswerFeedback(BaseModel):
     confidence_avg: float
 
 
+class ErrorAnalysis(BaseModel):
+    quote: str
+    mistake: str
+    fix: str
+    better_example: Optional[str] = None
+
 class Scorecard(BaseModel):
     session_id: str
     company: str
@@ -279,8 +297,8 @@ class Scorecard(BaseModel):
     filler_count: int
     pause_count: int
     answers: List[AnswerFeedback]
-    top_improvements: List[str]
-    star_weakest_component: str
+    error_analysis: List[ErrorAnalysis]
+    comprehensive_summary: str
     language_mix: dict[str, float]
 
 
@@ -326,3 +344,12 @@ class AffiliateDashboard(BaseModel):
 
 class UpdateUpiRequest(BaseModel):
     upi_id: str = Field(..., pattern=r"^[a-zA-Z0-9.\-_]+@[a-zA-Z]+$")
+
+class PushSubscriptionKeys(BaseModel):
+    p256dh: str
+    auth: str
+
+class PushSubscriptionRequest(BaseModel):
+    endpoint: str
+    expirationTime: Optional[int] = None
+    keys: PushSubscriptionKeys

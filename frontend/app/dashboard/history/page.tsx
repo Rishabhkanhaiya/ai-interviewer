@@ -90,6 +90,8 @@ export default function SessionHistoryPage() {
           { href: '/dashboard/history',  label: 'My Sessions',    icon: '📋', active: true },
           { href: '/buy',                label: 'Buy Pack',        icon: '💳' },
           { href: '/affiliate',          label: 'Refer & Earn',   icon: '🔗' },
+          { href: '/blog',               label: 'Blog & Resources', icon: '📝' },
+          { href: '/help',               label: 'Help & FAQ',      icon: '❓' },
           { href: '/settings',           label: 'Settings',        icon: '⚙️' },
         ].map(item => (
           <Link key={item.href} href={item.href}
