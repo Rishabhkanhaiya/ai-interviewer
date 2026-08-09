@@ -2,8 +2,10 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { apiClient } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
+import { TopBar } from '@/components/ui/TopBar'
 
 declare global {
   interface Window {
@@ -101,49 +103,51 @@ function BuyPageInner() {
   const minutes = selectedPack === 'placement_499' ? 200 : 100
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-white border-b border-black/8 px-6 py-4">
-        <button onClick={() => router.back()} className="text-sm text-gray-500 hover:text-gray-700">
-          ← Back
-        </button>
+    <div style={{minHeight:'100vh', background:'var(--color-bg)', display:'flex', flexDirection:'column'}}>
+      <TopBar breadcrumb="Buy Pack" />
+      <div className="px-6 py-4 border-b border-[var(--color-border)]">
+        <Link href="/dashboard" className="btn-ghost inline-flex items-center gap-2 text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]">
+          ← Back to Dashboard
+        </Link>
       </div>
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md space-y-6">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Complete your purchase</h1>
-            <p className="text-sm text-gray-500 mt-1">Secure payment via Razorpay · UPI, card, net banking</p>
+            <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Complete your purchase</h1>
+            <p className="text-sm text-[var(--color-text-tertiary)] mt-1">Secure payment via Razorpay · UPI, card, net banking</p>
           </div>
 
           {/* Pack Selection */}
           <div className="space-y-3">
             {[
-              { id: 'placement_499', price: '₹499', label: 'Placement Pack', sub: '10 rounds · 200 minutes', badge: 'Best value' },
-              { id: 'topup_199',     price: '₹199', label: 'Top-Up Pack',    sub: '5 rounds · 100 minutes', badge: null },
+              { id: 'placement_499', price: '₹499', label: 'Placement Pack', sub: <><span className="num">10</span> rounds · <span className="num">200</span> minutes</>, badge: 'Best value' },
+              { id: 'topup_199',     price: '₹199', label: 'Top-Up Pack',    sub: <><span className="num">5</span> rounds · <span className="num">100</span> minutes</>, badge: null },
             ].map(pack => (
               <button
                 key={pack.id}
                 onClick={() => setSelectedPack(pack.id)}
-                className={`w-full p-4 text-left rounded-xl border-2 transition-all ${
-                  selectedPack === pack.id
-                    ? 'border-indigo-500 bg-indigo-50'
-                    : 'border-black/8 bg-white hover:border-indigo-200'
-                }`}
+                className={`select-card card-glow ${selectedPack === pack.id ? 'selected active' : ''}`}
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-xl text-gray-900">{pack.price}</span>
+                      <span style={{fontFamily:'var(--font-mono)', fontWeight:600}}>{pack.price}</span>
                       {pack.badge && (
-                        <span className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">{pack.badge}</span>
+                        <span className='badge badge-info'>{pack.badge}</span>
                       )}
                     </div>
-                    <div className="text-sm font-medium text-gray-700 mt-0.5">{pack.label}</div>
-                    <div className="text-xs text-gray-500">{pack.sub}</div>
+                    <div className="text-sm font-medium text-[var(--color-text-secondary)] mt-0.5">{pack.label}</div>
+                    <div className="text-xs text-[var(--color-text-tertiary)]">{pack.sub}</div>
                   </div>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    selectedPack === pack.id ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300'
-                  }`}>
-                    {selectedPack === pack.id && <div className="w-2 h-2 bg-white rounded-full" />}
+                  <div
+                    className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
+                    style={
+                      selectedPack === pack.id
+                        ? { borderColor: 'var(--color-accent)', background: 'var(--color-accent)' }
+                        : { borderColor: 'var(--color-border)' }
+                    }
+                  >
+                    {selectedPack === pack.id && <div className="w-2 h-2 bg-[var(--color-surface)] rounded-full" />}
                   </div>
                 </div>
               </button>
@@ -152,7 +156,7 @@ function BuyPageInner() {
 
           {/* Affiliate Code */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
               Referral code <span className="text-gray-400 font-normal">(optional)</span>
             </label>
             <input
@@ -160,47 +164,47 @@ function BuyPageInner() {
               value={affiliateCode}
               onChange={e => setAffiliateCode(e.target.value.toUpperCase())}
               placeholder="e.g. RAHUL2025"
-              className={`w-full px-4 py-3 bg-gray-50 border rounded-lg text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 uppercase transition-colors ${
-                affiliateValid ? (affiliateValid.valid ? 'border-emerald-500 bg-emerald-50' : 'border-red-400 bg-red-50') : 'border-gray-200'
-              }`}
+              className='ui-input'
+              style={{textTransform:'uppercase'}}
             />
             {affiliateValid && (
-              <p className={`mt-1.5 text-xs font-medium ${affiliateValid.valid ? 'text-emerald-600' : 'text-red-500'}`}>
+              <p className="mt-1.5 text-xs font-medium" style={{ color: affiliateValid.valid ? 'var(--color-success)' : 'var(--color-danger)' }}>
                 {affiliateValid.valid ? `✓ ${affiliateValid.msg}` : `✕ ${affiliateValid.msg}`}
               </p>
             )}
           </div>
 
           {/* Order Summary */}
-          <div className="bg-white rounded-xl border border-black/8 p-4">
+          <div className='ui-card' style={{padding:16}}>
             <div className="flex justify-between text-sm mb-2">
-              <span className="text-gray-500">{rounds} rounds · {minutes} min</span>
-              <span className="font-medium">₹{price}</span>
+              <span className="text-[var(--color-text-tertiary)]"><span className="num">{rounds}</span> rounds · <span className="num">{minutes}</span> min</span>
+              <span className="font-medium">₹<span className="num">{price}</span></span>
             </div>
-            <div className="flex justify-between text-sm border-t border-black/5 pt-2 mt-2">
-              <span className="font-semibold text-gray-900">Total</span>
-              <span className="font-bold text-xl text-indigo-600">₹{price}</span>
+            <div className="flex justify-between text-sm border-t border-[var(--color-border)] pt-2 mt-2">
+              <span className="font-semibold text-[var(--color-text-primary)]">Total</span>
+              <span style={{fontFamily:'var(--font-mono)', fontWeight:700, color:'var(--color-accent-text)', fontSize:20}}>₹<span className="num">{price}</span></span>
             </div>
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">{error}</div>
+            <div style={{padding:'12px 16px', background:'var(--color-danger-subtle)', border:'1px solid var(--color-danger)', color:'var(--color-danger)', borderRadius:'var(--radius-sm)', fontSize:14}}>{error}</div>
           )}
 
           <button
             onClick={handlePayment}
             disabled={loading}
-            className="w-full py-4 bg-indigo-600 text-white font-bold text-lg rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            className='btn-primary'
+            style={{width:'100%', height:44, fontSize:16, fontWeight:600}}
           >
             {loading ? 'Opening payment...' : `Pay ₹${price} →`}
           </button>
 
           <div className="flex flex-col items-center gap-3 mt-4">
-            <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+            <div className="flex items-center gap-2 text-xs text-[var(--color-text-tertiary)] font-medium">
               <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              100% Secure Payment via Razorpay
+              <span className="num">100</span>% Secure Payment via Razorpay
             </div>
             
             <p className="text-xs text-gray-400 text-center">
@@ -209,9 +213,9 @@ function BuyPageInner() {
             </p>
             
             <div className="flex items-center gap-4 text-xs mt-2">
-              <Link href="/help#refunds" className="text-gray-400 hover:text-gray-700 transition-colors">Refund Policy</Link>
+              <Link href="/help#refunds" className="text-gray-400 hover:text-[var(--color-text-secondary)] transition-colors">Refund Policy</Link>
               <span className="text-gray-300">•</span>
-              <Link href="/help#terms" className="text-gray-400 hover:text-gray-700 transition-colors">Terms of Service</Link>
+              <Link href="/help#terms" className="text-gray-400 hover:text-[var(--color-text-secondary)] transition-colors">Terms of Service</Link>
             </div>
           </div>
         </div>
@@ -226,7 +230,7 @@ export default function BuyPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-indigo-50">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-gray-500">Loading...</p>
+          <p className="text-sm text-[var(--color-text-tertiary)]">Loading...</p>
         </div>
       </div>
     }>

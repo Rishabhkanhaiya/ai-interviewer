@@ -67,6 +67,14 @@ export const apiClient = {
   getProfile: () => api.get('/api/users/me'),
   updateProfile: (data: object) => api.put('/api/users/profile', data),
   completeOnboarding: (data: object) => api.post('/api/users/onboarding', data),
+  uploadResume: async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const { data } = await api.post('/api/users/profile/parse-resume', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return data
+  },
   getPackStatus: (): Promise<{ data: PackStatus }> => api.get('/api/users/pack-status'),
   deleteAccount: () => api.delete('/api/users/me'),
   getLeaderboard: () => api.get('/api/users/leaderboard'),
@@ -74,7 +82,7 @@ export const apiClient = {
   // Sessions
   startSession: (data: StartSessionRequest): Promise<{ data: StartSessionResponse }> =>
     api.post('/api/sessions/start', data),
-  listSessions: (limit = 10, offset = 0): Promise<{ data: { sessions: Session[] } }> =>
+  listSessions: (limit = 10, offset = 0): Promise<{ data: { sessions: Session[], total: number } }> =>
     api.get(`/api/sessions?limit=${limit}&offset=${offset}`),
   getScorecard: (sessionId: string) => api.get(`/api/sessions/${sessionId}/scorecard`),
 
@@ -86,9 +94,36 @@ export const apiClient = {
   // Affiliates
   registerAffiliate: () => api.post('/api/affiliates/register'),
   getAffiliateDashboard: () => api.get('/api/affiliates/dashboard'),
-  updateUpi: (upiId: string) => api.put('/api/affiliates/upi', { upi_id: upiId }),
+  getAffiliateSubLinks: () => api.get('/api/affiliates/links'),
+  createAffiliateSubLink: (source_name: string) => api.post('/api/affiliates/links', { source_name }),
+  updateUpi: (upi_id: string) => api.put('/api/affiliates/upi', { upi_id }),
 
   // Admin
   getAdminMetrics: () => api.get('/api/admin/metrics'),
-  approvePayout: (payoutId: string) => api.post(`/api/admin/payouts/${payoutId}/approve`),
+  approvePayout: (id: string) => api.post(`/api/admin/payouts/${id}/approve`),
+  toggleMaintenance: (enabled: boolean) => api.post('/api/admin/maintenance', { enabled }),
+
+  // Admin Posts
+  getAdminPosts: () => api.get('/api/admin/posts'),
+  getAdminPost: (id: string) => api.get(`/api/admin/posts/${id}`),
+  createAdminPost: (data: any) => api.post('/api/admin/posts', data),
+  updateAdminPost: (id: string, data: any) => api.put(`/api/admin/posts/${id}`, data),
+  deleteAdminPost: (id: string) => api.delete(`/api/admin/posts/${id}`),
+  uploadImage: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/api/admin/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  // Public Posts
+  getPosts: (category?: string) => api.get(`/api/posts${category ? `?category=${encodeURIComponent(category)}` : ''}`),
+  getPostBySlug: (slug: string) => api.get(`/api/posts/${slug}`),
+
+  // Notifications
+  getInAppNotifications: () => api.get('/api/notifications/in-app'),
+  markNotificationRead: (id: string) => api.post(`/api/notifications/in-app/${id}/read`),
+  sendAdminNotification: (data: { title: string, message: string, link?: string, user_id?: string, type?: string }) => 
+    api.post('/api/notifications/in-app/admin-send', data),
 }

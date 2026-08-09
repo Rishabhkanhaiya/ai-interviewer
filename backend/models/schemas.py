@@ -44,6 +44,11 @@ class LanguagePref(str, Enum):
     HINDI = "hindi"
 
 
+class CameraMode(str, Enum):
+    VIDEO = "video"
+    AUDIO_ONLY = "audio_only"
+
+
 class InterviewStage(str, Enum):
     INTRO = "intro"
     ICEBREAKER = "icebreaker"
@@ -86,6 +91,7 @@ class UserProfile(BaseModel):
     college: Optional[str] = None
     graduation_year: Optional[int] = None
     target_companies: Optional[List[str]] = None
+    resume_text: Optional[str] = None
 
 
 class UpdateProfileRequest(BaseModel):
@@ -93,6 +99,7 @@ class UpdateProfileRequest(BaseModel):
     college: Optional[str] = Field(None, min_length=2, max_length=200)
     graduation_year: Optional[int] = Field(None, ge=2024, le=2030)
     target_companies: Optional[List[str]] = None
+    resume_text: Optional[str] = Field(None, max_length=5000)
 
 
 # ── Pack Schemas ──────────────────────────────────────────────────────────────
@@ -117,10 +124,11 @@ class PackStatusResponse(BaseModel):
 # ── Session Schemas ───────────────────────────────────────────────────────────
 
 class StartSessionRequest(BaseModel):
-    company: CompanyMode
+    company: str
     role: RoleType
     round_type: RoundType
     language_pref: LanguagePref = LanguagePref.HINGLISH
+    camera_mode: CameraMode = CameraMode.VIDEO
     resume_text: Optional[str] = Field(None, max_length=800)
 
     @field_validator("resume_text")
@@ -237,6 +245,7 @@ class InterviewEngineResponse(BaseModel):
     question_asked: bool
     evaluation: Optional[PerTurnEvaluation] = None
     belief_state: Optional[BeliefState] = None
+    session_complete: bool = False
 
 
 # ── Analytics Schemas ─────────────────────────────────────────────────────────
@@ -353,3 +362,6 @@ class PushSubscriptionRequest(BaseModel):
     endpoint: str
     expirationTime: Optional[int] = None
     keys: PushSubscriptionKeys
+
+class TopicSuggestionRequest(BaseModel):
+    topic: str

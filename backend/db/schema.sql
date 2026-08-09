@@ -238,3 +238,39 @@ ALTER TABLE sessions ADD COLUMN IF NOT EXISTS ip_address TEXT;
 ALTER TABLE affiliate_payouts ADD COLUMN IF NOT EXISTS is_flagged BOOLEAN DEFAULT false;
 ALTER TABLE affiliate_payouts ADD COLUMN IF NOT EXISTS flag_reason TEXT;
 
+-- ── 7. CMS (Blog) ─────────────────────────────────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;
+
+CREATE TABLE IF NOT EXISTS posts (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug          TEXT UNIQUE NOT NULL,
+  title         TEXT NOT NULL,
+  excerpt       TEXT,
+  content       TEXT NOT NULL,
+  cover_image_url TEXT,
+  category      TEXT NOT NULL,
+  author_id     UUID REFERENCES users(id),
+  status        TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'scheduled')),
+  published_at  TIMESTAMPTZ,
+  scheduled_for TIMESTAMPTZ,
+  seo_title     TEXT,
+  seo_description TEXT,
+  read_time_minutes INT,
+  created_at    TIMESTAMPTZ DEFAULT now(),
+  updated_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_posts_status_published ON posts (status, published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_category ON posts (category);
+
+ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
+
+-- Public can read published posts
+CREATE POLICY posts_public_read ON posts
+    FOR SELECT USING (status = 'published');
+
+-- Admins can do everything
+CREATE POLICY posts_admin_all ON posts
+    FOR ALL USING (
+        EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND is_admin = TRUE)
+    );

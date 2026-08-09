@@ -5,24 +5,17 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { apiClient, type Session } from '@/lib/api'
+import { Sidebar } from '@/components/ui/Sidebar'
+import { Search } from 'lucide-react'
+import { StatusBadge, ScoreBadge } from '@/components/ui/StatusBadge'
+import { TopBar } from '@/components/ui/TopBar'
+import { MonogramBadge } from '@/components/ui/Monogram'
+import { StatTile } from '@/components/ui/StatTile'
 
 const COMPANY_LABELS: Record<string, string> = {
   tcs_nqt: 'TCS NQT', infosys: 'Infosys InfyTQ', wipro: 'Wipro NLTH',
   accenture: 'Accenture', capgemini: 'Capgemini', startup_react: 'D2C Startup',
   faang: 'FAANG-Style', hr_behavioral: 'HR Behavioral', custom: 'Custom',
-}
-
-const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  completed:  { label: 'Completed',  cls: 'bg-emerald-50 text-emerald-700' },
-  active:     { label: 'In progress', cls: 'bg-indigo-50  text-indigo-700'  },
-  abandoned:  { label: 'Abandoned',  cls: 'bg-gray-100   text-gray-500'    },
-  timeout:    { label: 'Timed out',  cls: 'bg-amber-50   text-amber-700'   },
-}
-
-function ScoreBadge({ score }: { score: number | null }) {
-  if (score === null || score === undefined) return <span className="text-xs text-gray-300">—</span>
-  const cls = score >= 80 ? 'score-excellent' : score >= 60 ? 'score-good' : 'score-poor'
-  return <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${cls}`}>{score}/100</span>
 }
 
 export default function SessionHistoryPage() {
@@ -33,12 +26,20 @@ export default function SessionHistoryPage() {
   const [hasMore, setHasMore] = useState(true)
   const [companyFilter, setCompanyFilter] = useState('')
   const [roundFilter, setRoundFilter] = useState('')
+  const [userName, setUserName] = useState<string>('')
   const PAGE_SIZE = 10
 
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/auth'); return }
+      
+      try {
+        const prof = await apiClient.getProfile()
+        setUserName(prof.data.name || '')
+      } catch (err) {
+        // ignore
+      }
     }
     check()
   }, [router])
@@ -60,8 +61,20 @@ export default function SessionHistoryPage() {
     load()
   }, [page])
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/auth')
+  }
+
   const filtered = sessions.filter(s => {
-    if (companyFilter && s.company !== companyFilter) return false
+    if (companyFilter) {
+      const filterLower = companyFilter.toLowerCase();
+      const compRaw = s.company?.toLowerCase() || '';
+      const compLabel = (COMPANY_LABELS[s.company || ''] || s.company || '').toLowerCase();
+      if (!compRaw.includes(filterLower) && !compLabel.includes(filterLower)) {
+        return false;
+      }
+    }
     if (roundFilter && s.round_type !== roundFilter) return false
     return true
   })
@@ -73,181 +86,194 @@ export default function SessionHistoryPage() {
     : null
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className="w-60 bg-white border-r border-black/8 flex flex-col py-6 px-4 gap-1 shrink-0">
-        <div className="flex items-center gap-2 px-3 mb-6">
-          <div className="w-7 h-7 bg-indigo-600 rounded-md flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-          </div>
-          <span className="font-bold text-gray-900 text-sm">InterviewAI</span>
-        </div>
-        {[
-          { href: '/dashboard',          label: 'Dashboard',      icon: '🏠' },
-          { href: '/interview/setup',    label: 'Start Interview', icon: '🎤' },
-          { href: '/dashboard/history',  label: 'My Sessions',    icon: '📋', active: true },
-          { href: '/buy',                label: 'Buy Pack',        icon: '💳' },
-          { href: '/affiliate',          label: 'Refer & Earn',   icon: '🔗' },
-          { href: '/blog',               label: 'Blog & Resources', icon: '📝' },
-          { href: '/help',               label: 'Help & FAQ',      icon: '❓' },
-          { href: '/settings',           label: 'Settings',        icon: '⚙️' },
-        ].map(item => (
-          <Link key={item.href} href={item.href}
-            className={`flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors ${
-              item.active ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-indigo-600'
-            }`}>
-            <span>{item.icon}</span>{item.label}
-          </Link>
-        ))}
-      </aside>
+    <div className="flex" style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
+      <Sidebar onSignOut={handleSignOut} userName={userName} />
 
-      <main className="flex-1 p-8 overflow-y-auto">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">My Sessions</h1>
-              <p className="text-sm text-gray-500 mt-0.5">All your practice interview history</p>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+        <TopBar breadcrumb={['Dashboard', 'My Sessions']} />
+
+        <main style={{ flex: 1, padding: 32, overflowY: 'auto' }}>
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 20 }}>
+                  My Sessions
+                </h1>
+                <p className="text-sm text-gray-500 mt-0.5">All your practice interview history</p>
+              </div>
+              <Link href="/interview/setup"
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+                + New interview
+              </Link>
             </div>
-            <Link href="/interview/setup"
-              className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
-              + New interview
-            </Link>
-          </div>
 
-          {/* Summary stats */}
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { label: 'Total sessions', value: filtered.length },
-              { label: 'Practice time', value: `${Math.round(totalDuration / 60)} min` },
-              { label: 'Avg score', value: avgScore !== null ? `${avgScore}/100` : '—' },
-            ].map(m => (
-              <div key={m.label} className="bg-white rounded-xl border border-black/8 shadow-sm p-4 text-center">
-                <div className="text-2xl font-bold text-gray-900">{m.value}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{m.label}</div>
+            {/* Summary stats */}
+            <div className="grid grid-cols-3 gap-4">
+              <StatTile
+                type="sessions"
+                label="Total sessions"
+                numericValue={filtered.length}
+              />
+              <StatTile
+                type="sessions"
+                label="Practice time"
+                numericValue={Math.round(totalDuration / 60)}
+                unit=" min"
+              />
+              <StatTile
+                type="best"
+                label="Avg score"
+                numericValue={avgScore !== null ? avgScore : 0}
+                unit={avgScore !== null ? "/100" : undefined}
+                hint={avgScore === null ? "Finish a session to get a score" : undefined}
+              />
+            </div>
+
+            {/* Filters */}
+            <div className="flex items-center justify-between">
+              <div className="pill-control">
+                <button
+                  onClick={() => setRoundFilter('')}
+                  className={`pill-tab ${roundFilter === '' ? 'active' : ''}`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setRoundFilter('technical')}
+                  className={`pill-tab ${roundFilter === 'technical' ? 'active' : ''}`}
+                >
+                  Technical
+                </button>
+                <button
+                  onClick={() => setRoundFilter('hr')}
+                  className={`pill-tab ${roundFilter === 'hr' ? 'active' : ''}`}
+                >
+                  HR
+                </button>
+                <button
+                  onClick={() => setRoundFilter('managerial')}
+                  className={`pill-tab ${roundFilter === 'managerial' ? 'active' : ''}`}
+                >
+                  Managerial
+                </button>
               </div>
-            ))}
-          </div>
 
-          {/* Filters */}
-          <div className="flex items-center gap-3">
-            <select
-              value={companyFilter}
-              onChange={e => setCompanyFilter(e.target.value)}
-              className="px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-400"
-            >
-              <option value="">All companies</option>
-              {Object.entries(COMPANY_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-            <select
-              value={roundFilter}
-              onChange={e => setRoundFilter(e.target.value)}
-              className="px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-400"
-            >
-              <option value="">All round types</option>
-              <option value="hr">HR Round</option>
-              <option value="technical">Technical Round</option>
-              <option value="managerial">Managerial Round</option>
-            </select>
-            {(companyFilter || roundFilter) && (
-              <button
-                onClick={() => { setCompanyFilter(''); setRoundFilter('') }}
-                className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
-
-          {/* Sessions table */}
-          <div className="bg-white rounded-2xl border border-black/8 shadow-sm overflow-hidden">
-            {loading ? (
-              <div className="p-8 text-center text-sm text-gray-400">Loading sessions...</div>
-            ) : filtered.length === 0 ? (
-              <div className="p-8 text-center">
-                <div className="text-3xl mb-3">🎤</div>
-                <p className="text-sm text-gray-500">No sessions yet. Start your first interview!</p>
-                <Link href="/interview/setup" className="mt-3 inline-block text-sm text-indigo-600 hover:underline">
-                  Start now →
-                </Link>
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={companyFilter}
+                    onChange={e => setCompanyFilter(e.target.value)}
+                    placeholder="Search company..."
+                    className="ui-input"
+                    style={{ height: 36, width: 220, paddingLeft: 36 }}
+                  />
+                </div>
+                {(companyFilter || roundFilter) && (
+                  <button
+                    onClick={() => { setCompanyFilter(''); setRoundFilter('') }}
+                    className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
-            ) : (
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-black/8">
-                  <tr>
-                    {['Company', 'Round', 'Date', 'Duration', 'Score', 'Status', ''].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5">
+            </div>
+
+            {/* Sessions List */}
+            <div className="ui-card" style={{ overflow: 'hidden' }}>
+              {loading ? (
+                <div className="p-8 text-center text-sm text-gray-400">Loading sessions...</div>
+              ) : filtered.length === 0 ? (
+                <div className="p-8 text-center">
+                  <div className="text-3xl mb-3">🎤</div>
+                  <p className="text-sm text-gray-500">No sessions yet. Start your first interview!</p>
+                  <Link href="/interview/setup" className="mt-3 inline-block text-sm text-indigo-600 hover:underline">
+                    Start now →
+                  </Link>
+                </div>
+              ) : (
+                <div>
                   {filtered.map(session => {
-                    const badge = STATUS_BADGE[session.status] || STATUS_BADGE.completed
+                    const companyName = COMPANY_LABELS[session.company] || session.company || 'Unknown'
                     return (
-                      <tr key={session.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3">
-                          <span className="text-sm font-medium text-gray-900">
-                            {COMPANY_LABELS[session.company] || session.company}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-sm text-gray-600 capitalize">{session.round_type}</span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {new Date(session.started_at).toLocaleDateString('en-IN')}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {session.duration_seconds ? `${Math.round(session.duration_seconds / 60)}m` : '—'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <ScoreBadge score={session.overall_score ?? null} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${badge.cls}`}>
-                            {badge.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
+                      <div
+                        key={session.id}
+                        className="hover:bg-[var(--color-surface-sunken)] transition-colors"
+                        style={{
+                          padding: '12px 16px',
+                          borderBottom: '1px solid var(--color-border)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 16
+                        }}
+                      >
+                        <MonogramBadge name={companyName} />
+                        
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                            {companyName}
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                            <span className="capitalize">{session.round_type}</span> • {new Date(session.started_at).toLocaleDateString('en-IN')}
+                            {session.duration_seconds ? (
+                              <>
+                                {' • '}
+                                <span className="num">{Math.round(session.duration_seconds / 60)}</span>m
+                              </>
+                            ) : ''}
+                          </div>
+                        </div>
+
+                        <div>
+                          {(session.overall_score === null || session.overall_score === undefined) ? (
+                            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>Pending</span>
+                          ) : (
+                            <ScoreBadge score={session.overall_score} />
+                          )}
+                        </div>
+                        
+                        <div style={{ width: 100 }}>
+                          <StatusBadge status={session.status} />
+                        </div>
+
+                        <div style={{ width: 60, textAlign: 'right' }}>
                           {session.status === 'completed' && (
                             <Link href={`/interview/scorecard/${session.id}`}
-                              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+                              style={{ fontSize: 14, color: 'var(--color-accent-text)', textDecoration: 'none' }}>
                               View →
                             </Link>
                           )}
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
                     )
                   })}
-                </tbody>
-              </table>
-            )}
-          </div>
+                </div>
+              )}
+            </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setPage(p => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="px-4 py-2 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              ← Previous
-            </button>
-            <span className="text-sm text-gray-500">Page {page + 1}</span>
-            <button
-              onClick={() => setPage(p => p + 1)}
-              disabled={!hasMore}
-              className="px-4 py-2 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Next →
-            </button>
+            {/* Pagination */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="btn-ghost disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ← Previous
+              </button>
+              <span className="text-sm text-gray-500">Page <span className="num">{page + 1}</span></span>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={!hasMore}
+                className="btn-ghost disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

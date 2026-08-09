@@ -73,7 +73,7 @@ The following features are permanently banned from V1 development. Any team memb
 ### Hard Caps — Always Enforced
 - ₹499 pack = 10 rounds = 200 minutes maximum. Hard Redis cap. Cannot be bypassed.
 - ₹199 top-up = 5 rounds = 100 minutes.
-- No session can exceed 25 minutes individually (Redis timeout).
+- Sessions block new questions after 20 minutes (allowing current answer to finish).
 - Max 3 concurrent WebSocket sessions per user account at any time.
 - Rate limit: max 10 API calls per minute per user to prevent abuse.
 
@@ -841,7 +841,7 @@ Growth Lead owns updating these pages 48 hours before each known drive.
 | S-04 | Sentry error monitoring | V1 | Every backend crash reported with full stack trace — free tier |
 | S-05 | UptimeRobot alerts | V1 | Pings FastAPI every 5 minutes, SMS alert on downtime — free |
 | S-06 | Redis rate limiting | V1 | Max 10 API calls per minute per user, max 3 concurrent sessions |
-| S-07 | Session timeout | V1 | Any session exceeding 25 minutes is automatically terminated |
+| S-07 | Session timeout | V1 | New questions blocked after 20 minutes; session allowed to naturally conclude |
 | S-08 | Payment webhook verification | V1 | Razorpay webhook signature verified before crediting pack |
 | S-09 | Data encryption | V2 | Transcripts encrypted at rest in Supabase storage |
 
@@ -1537,18 +1537,20 @@ Backend:
 
 **Tasks:**
 - Build `/interview/setup` page as described in Section 5, Page 04
-- 5-step flow with progress indicator at top
-- Step 1: Company selector (card grid with icons)
-- Step 2: Round type (radio cards)
-- Step 3: Language preference (3 options)
-- Step 4: Resume paste (text area, 800 char max, counter)
-- Step 5: Confirm + start (shows what will be used from pack)
+- 6-step flow with progress indicator at top
+- Step 1: Mic Check Gateway (Mandatory: user must speak and volume meter must register audio before proceeding)
+- Step 2: Company selector (card grid with icons)
+- Step 3: Round type (radio cards)
+- Step 4: Language preference (3 options)
+- Step 5: Resume paste (text area, 800 char max, counter)
+- Step 6: Confirm + start (shows what will be used from pack)
 - Navigation: back button between steps
 - Validation: company and round type are required, resume is optional
 - On "Start interview" → call POST `/api/sessions/start` → receive session_id → redirect to `/interview/session`
 
 **Acceptance Criteria:**
-- All 5 steps navigable with back/forward
+- All 6 steps navigable with back/forward
+- Mic check strictly prevents moving forward if no audio is detected
 - Required field validation prevents starting without company + round type
 - Resume text correctly passed to backend on session start
 - Session start correctly debited from pack (rounds_used incremented)
@@ -1569,14 +1571,14 @@ Backend:
   - Check `minutes_used < minutes_total` — else 403 "No minutes remaining"
   - Increment Redis and PostgreSQL atomically on session start
 - Session timeout enforcement:
-  - Redis key `session:{id}:timeout` with 25-minute TTL
-  - FastAPI background task checks — sends warning at 23 min, terminates at 25
+  - Redis key `session:{id}:question_block` with 20-minute TTL
+  - FastAPI checks time elapsed before asking next question — if > 20 min, proceed to closing stage
 - Rate limiting middleware: check `user:{id}:rate` before any API call
 
 **Acceptance Criteria:**
 - Pack correctly debited on session start
 - Session rejected correctly when pack is exhausted
-- Session auto-terminates at 25 minutes
+- Session blocks new questions after 20 minutes and naturally concludes
 - Rate limit correctly blocks rapid API calls
 
 ---
@@ -1597,8 +1599,7 @@ AI Lead:
 
 Frontend Lead:
 - Build `/interview/scorecard/:sessionId` page as described in Section 5, Page 06
-- Components: score badge, STAR table, WPM bar chart, filler timeline, answer cards
-- Use Chart.js or Recharts for WPM graph and filler count bar
+- Components: score badge, STAR table, communication clarity badge (Fast/Slow/Good), answer cards
 - "Download PDF" button (Phase 17)
 - "Share LinkedIn" and "Share WhatsApp" buttons
 - Overall score colour-coded: 80+ green, 60-79 amber, below 60 red
@@ -1606,7 +1607,7 @@ Frontend Lead:
 **Acceptance Criteria:**
 - Scorecard displays all analytics correctly after a real test session
 - STAR table correctly shows per-answer breakdown
-- WPM chart renders correctly
+- Communication clarity badges render correctly based on WPM
 - Top 3 improvements are specific and relevant (not generic)
 
 ---
@@ -1618,11 +1619,7 @@ Frontend Lead:
 **Tasks:**
 - Use `react-pdf` or `jsPDF` library in Next.js
 - Design PDF template:
-  - Page 1: Logo + header + overall score (large) + session metadata
-  - Page 2: STAR breakdown table
-  - Page 3: Voice analytics (WPM, fillers, pauses) as simple charts
-  - Page 4: Answer-by-answer feedback
-  - Page 5: Top 3 improvements + next steps
+  - 1-Page Summary: Logo, overall score, STAR breakdown, top 3 improvements, and actionable feedback
 - Generate PDF client-side (avoid server cost)
 - Filename: `[CompanyName]-[Date]-Score[X].pdf`
 - LinkedIn card: generate 1200×630 PNG (open graph image) using html-to-canvas
@@ -1673,6 +1670,7 @@ Growth Lead:
 - Build `/dashboard` page as described in Section 5, Page 03
 - Sidebar navigation with all routes
 - Pack status banner (pulls from GET /api/packs/status)
+- Low Balance Warning: Lock "Start" button if rounds = 0 and show glowing "Top Up" button. Warning banner if 1 round left.
 - Quick start card with company + role selectors → redirects to /interview/setup
 - Recent sessions (last 3) from GET /api/sessions?limit=3
 - Progress metric cards (average score, WPM trend, filler trend)
@@ -1748,15 +1746,14 @@ Frontend Lead:
 - Session list with filters (by company, round type)
 - Sorting (recent, highest score, lowest score)
 - Score trend chart (Chart.js line chart)
-- WPM trend chart
-- Filler word count trend
+- Communication clarity trend (badges)
 - Each session card links to its scorecard
 - Pagination: 10 sessions per page
 
 **Acceptance Criteria:**
 - All past sessions display correctly
 - Filter by company works correctly
-- Trend charts render with correct data points
+- Score trend chart renders with correct data points
 - Links to individual scorecards work
 
 ---
@@ -1895,6 +1892,7 @@ Growth Lead:
   - Last 50 errors (Sentry API integration)
   - Affiliate pending payouts list with approve button
   - Anti-gaming flagged sessions list
+  - "Kill Switch" (Maintenance Mode) toggle to prevent new sessions during API outages
 - Affiliate payout approval: `POST /api/admin/payouts/approve` → marks as paid in DB
 
 **Acceptance Criteria:**
@@ -1902,6 +1900,7 @@ Growth Lead:
 - Revenue figure matches sum of payments table
 - Affiliate payout approve button correctly updates database
 - Anti-gaming flags correctly show duplicate transcript sessions
+- Maintenance Mode toggle immediately blocks new session creation with a user-friendly error message
 
 ---
 

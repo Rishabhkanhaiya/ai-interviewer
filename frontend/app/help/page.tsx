@@ -44,30 +44,30 @@ export default function HelpPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
-      <nav className="border-b border-black/8 bg-white sticky top-0 z-10">
+    <div className="min-h-screen bg-[var(--color-bg)]">
+      <nav className="border-b border-[var(--color-border)] bg-[var(--color-surface)] sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
-          <a href="/dashboard" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">← Dashboard</a>
-          <a href="/" className="font-semibold text-[#4F46E5]">InterviewAI</a>
+          <a href="/dashboard" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors">← Dashboard</a>
+          <a href="/" className="font-semibold text-[var(--color-text-primary)]">InterviewAI</a>
         </div>
       </nav>
 
       <main className="max-w-4xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-bold text-[#111827] mb-3">Help Center</h1>
-        <p className="text-[#6B7280] mb-4">
+        <h1 className="text-3xl font-bold text-[var(--color-text-primary)] mb-3">Help Center</h1>
+        <p className="text-[var(--color-text-secondary)] mb-4">
           Can&apos;t find your answer? WhatsApp us directly —{' '}
-          <a href="https://wa.me/+91" className="text-[#4F46E5] hover:underline">click here to chat</a>. We respond within 2 hours (9am–10pm).
+          <a href="https://wa.me/+91" className="text-[var(--color-accent)] hover:underline">click here to chat</a>. We respond within 2 hours (9am–10pm).
         </p>
 
         {/* Quick WhatsApp CTA */}
-        <div className="bg-[#ECFDF5] border border-[#10B981]/20 rounded-xl p-4 mb-10 flex items-center gap-3">
+        <div className="bg-[var(--color-success-subtle)] border border-[var(--color-success)] rounded-xl p-4 mb-10 flex items-center gap-3">
           <span className="text-2xl">💬</span>
           <div>
-            <p className="font-medium text-[#111827] text-sm">Need urgent help?</p>
-            <p className="text-sm text-[#6B7280]">WhatsApp support responds in under 2 hours for payment and technical issues.</p>
+            <p className="font-medium text-[var(--color-text-primary)] text-sm">Need urgent help?</p>
+            <p className="text-sm text-[var(--color-text-secondary)]">WhatsApp support responds in under 2 hours for payment and technical issues.</p>
           </div>
           <a href="https://wa.me/+91" target="_blank" rel="noopener noreferrer"
-            className="ml-auto flex-shrink-0 bg-[#25D366] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#22c55e] transition">
+            className="ml-auto flex-shrink-0 bg-[var(--color-success)] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[var(--color-success)] transition">
             Chat now
           </a>
         </div>
@@ -75,15 +75,15 @@ export default function HelpPage() {
         <div className="space-y-10">
           {categories.map((cat, ci) => (
             <section key={ci}>
-              <h2 className="text-lg font-semibold text-[#111827] mb-4">{cat.title}</h2>
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">{cat.title}</h2>
               <div className="space-y-3">
                 {cat.faqs.map((faq, fi) => (
-                  <details key={fi} className="bg-white border border-black/8 rounded-xl group">
-                    <summary className="px-5 py-4 cursor-pointer text-sm font-medium text-[#374151] hover:text-[#111827] transition list-none flex items-center justify-between">
+                  <details key={fi} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl group">
+                    <summary className="px-5 py-4 cursor-pointer text-sm font-medium text-[var(--color-text-primary)] hover:text-[var(--color-text-primary)] transition list-none flex items-center justify-between">
                       {faq.q}
-                      <span className="text-[#9CA3AF] group-open:rotate-180 transition-transform ml-3 flex-shrink-0">▼</span>
+                      <span className="text-[var(--color-text-tertiary)] group-open:rotate-180 transition-transform ml-3 flex-shrink-0">▼</span>
                     </summary>
-                    <div className="px-5 pb-4 text-sm text-[#6B7280] leading-relaxed border-t border-black/8 pt-3">
+                    <div className="px-5 pb-4 text-sm text-[var(--color-text-secondary)] leading-relaxed border-t border-[var(--color-border)] pt-3">
                       {faq.a}
                     </div>
                   </details>
@@ -93,16 +93,16 @@ export default function HelpPage() {
           ))}
         </div>
 
-        <div className="mt-12 bg-[#EEF2FF] rounded-xl p-6 text-center">
-          <p className="text-sm font-medium text-[#4F46E5] mb-1">Still need help?</p>
-          <p className="text-sm text-[#374151] mb-4">Our team reads every message personally.</p>
+        <div className="mt-12 bg-[var(--color-accent-subtle)] rounded-xl p-6 text-center">
+          <p className="text-sm font-medium text-[var(--color-accent)] mb-1">Still need help?</p>
+          <p className="text-sm text-[var(--color-text-primary)] mb-4">Our team reads every message personally.</p>
           <div className="flex gap-3 justify-center flex-wrap">
             <a href="https://wa.me/+91" target="_blank" rel="noopener noreferrer"
-              className="bg-[#25D366] text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-[#22c55e] transition">
+              className="bg-[var(--color-success)] text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-[var(--color-success)] transition">
               WhatsApp us
             </a>
             <a href="mailto:support@yourdomain.in"
-              className="bg-white border border-gray-200 text-[#374151] text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-50 transition">
+              className="bg-[var(--color-surface)] border border-gray-200 text-[var(--color-text-primary)] text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-50 transition">
               Email support
             </a>
           </div>

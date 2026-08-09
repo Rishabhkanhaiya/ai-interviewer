@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { apiClient } from '@/lib/api'
+import Link from 'next/link'
 
 interface Metrics {
   total_users: number
@@ -32,6 +33,8 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [approvingId, setApprovingId] = useState<string | null>(null)
+  const [maintenanceMode, setMaintenanceMode] = useState(false)
+  const [toggling, setToggling] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -62,6 +65,18 @@ export default function AdminDashboardPage() {
     finally { setApprovingId(null) }
   }
 
+  const handleToggleMaintenance = async () => {
+    setToggling(true)
+    try {
+      await apiClient.toggleMaintenance(!maintenanceMode)
+      setMaintenanceMode(!maintenanceMode)
+    } catch {
+      alert('Failed to toggle maintenance mode. Check server connection.')
+    } finally {
+      setToggling(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
@@ -88,14 +103,50 @@ export default function AdminDashboardPage() {
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-            <p className="text-gray-500 text-sm mt-0.5">Internal metrics — InterviewAI</p>
+          <div className="flex items-center gap-6">
+            <div>
+              <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+              <p className="text-gray-500 text-sm mt-0.5">Internal metrics — InterviewAI</p>
+            </div>
+            
+            {/* Nav Links */}
+            <div className="hidden sm:flex items-center gap-2 pl-6 border-l border-white/10">
+              <Link 
+                href="/admin/posts"
+                className="px-4 py-2 bg-gray-900 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+              >
+                <span>✍️</span>
+                Blog CMS
+              </Link>
+            </div>
           </div>
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
             Live
           </div>
+        </div>
+
+        {/* Kill Switch (Maintenance Mode) */}
+        <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <span className="text-xl">🚨</span> System Kill Switch
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Enable maintenance mode to instantly block all new interview sessions. Use during API outages.
+            </p>
+          </div>
+          <button
+            onClick={handleToggleMaintenance}
+            disabled={toggling}
+            className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-lg ${
+              maintenanceMode 
+                ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/20' 
+                : 'bg-gray-700 hover:bg-gray-600 text-white shadow-black/20'
+            } disabled:opacity-50`}
+          >
+            {toggling ? 'Updating...' : maintenanceMode ? 'Maintenance Mode: ON' : 'Maintenance Mode: OFF'}
+          </button>
         </div>
 
         {/* Business Metrics */}
@@ -134,44 +185,117 @@ export default function AdminDashboardPage() {
               ))}
             </div>
             <div className="mt-4 p-3 bg-gray-800 rounded-lg text-xs text-gray-400">
-              API cost estimated at ₹15.80/session (GPT-4o-mini + Sarvam). Actual costs may vary.
+              API cost estimated dynamically at ₹1.00/minute based on total session duration (GPT-4o-mini + Sarvam). Actual costs may vary.
             </div>
           </div>
         )}
 
         {/* Pending Payouts */}
         <div className="bg-gray-900 border border-white/10 rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-white">Pending Affiliate Payouts</h2>
-            {metrics && (
-              <span className="text-sm text-amber-400 font-medium">
-                Total: ₹{Math.round(metrics.pending_affiliate_payouts_paise / 100)}
-              </span>
-            )}
-          </div>
-          {payouts.length === 0 ? (
-            <div className="text-sm text-gray-500 py-4 text-center">
-              No pending payouts — fetch from the backend API to load them.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {payouts.map(p => (
-                <div key={p.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                  <div>
-                    <div className="text-sm font-medium text-white">₹{Math.round(p.amount_paise / 100)}</div>
-                    <div className="text-xs text-gray-500">{new Date(p.created_at).toLocaleDateString('en-IN')}</div>
-                  </div>
-                  <button
-                    onClick={() => handleApprove(p.id)}
-                    disabled={approvingId === p.id}
-                    className="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-                  >
-                    {approvingId === p.id ? 'Processing...' : 'Mark as Paid'}
-                  </button>
+        {/* Affiliates & Toggles Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          
+          {/* Left Column: Payouts & Toggles */}
+          <div className="space-y-8">
+            <div className="bg-gray-900 border border-white/10 rounded-2xl p-6">
+              <h2 className="text-xl font-bold mb-4">Pending Payouts</h2>
+              {payouts.length === 0 ? (
+                <p className="text-gray-500">No pending payouts.</p>
+              ) : (
+                <div className="space-y-4">
+                  {payouts.map(p => (
+                    <div key={p.id} className="flex items-center justify-between p-4 bg-gray-800 rounded-xl border border-white/5">
+                      <div>
+                        <div className="font-semibold text-lg">₹{(p.amount_paise / 100).toFixed(2)}</div>
+                        <div className="text-sm text-gray-400">{new Date(p.created_at).toLocaleDateString()}</div>
+                      </div>
+                      <button
+                        disabled={approvingId === p.id}
+                        onClick={() => handleApprove(p.id)}
+                        className="px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                      >
+                        {approvingId === p.id ? 'Approving...' : 'Approve'}
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
+
+            <div className="bg-gray-900 border border-white/10 rounded-2xl p-6">
+              <h2 className="text-xl font-bold mb-4">System Controls</h2>
+              <div className="flex items-center justify-between p-4 bg-gray-800 rounded-xl border border-white/5">
+                <div>
+                  <div className="font-semibold">Maintenance Mode</div>
+                  <div className="text-sm text-gray-400">Disables all new sessions</div>
+                </div>
+                <button
+                  disabled={toggling}
+                  onClick={toggleMaintenance}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${maintenanceMode ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-700 text-white hover:bg-gray-600'} disabled:opacity-50`}
+                >
+                  {toggling ? 'Updating...' : maintenanceMode ? 'Turn Off' : 'Turn On'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: In-App Notifications */}
+          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <span className="text-xl">🔔</span> Send In-App Notification
+            </h2>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              const fd = new FormData(e.currentTarget)
+              const title = fd.get('title') as string
+              const message = fd.get('message') as string
+              const link = fd.get('link') as string
+              const target = fd.get('target') as string
+              
+              if (!title || !message) return alert("Title and Message are required.")
+              
+              const payload = {
+                title, message, 
+                link: link || undefined,
+                user_id: target || undefined
+              }
+              
+              try {
+                await apiClient.sendAdminNotification(payload)
+                alert("Notification sent successfully!")
+                e.currentTarget.reset()
+              } catch (err: any) {
+                alert("Failed to send: " + err.message)
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Title</label>
+                <input required name="title" type="text" placeholder="e.g. Mega Sale! 50% Off" className="w-full p-3 bg-gray-950 border border-white/10 rounded-xl focus:border-indigo-500 outline-none transition-all" />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Message</label>
+                <textarea required name="message" placeholder="Type the notification body here..." rows={3} className="w-full p-3 bg-gray-950 border border-white/10 rounded-xl focus:border-indigo-500 outline-none transition-all resize-none"></textarea>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Link (Optional)</label>
+                <input name="link" type="text" placeholder="e.g. /buy or https://..." className="w-full p-3 bg-gray-950 border border-white/10 rounded-xl focus:border-indigo-500 outline-none transition-all" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Target User ID (Optional)</label>
+                <input name="target" type="text" placeholder="Leave empty to broadcast to EVERYONE" className="w-full p-3 bg-gray-950 border border-white/10 rounded-xl focus:border-indigo-500 outline-none transition-all" />
+                <p className="text-xs text-gray-500 mt-1">If left empty, this will be sent as a global notification to all users.</p>
+              </div>
+              
+              <button type="submit" className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium shadow-sm transition-colors">
+                Send Notification Now
+              </button>
+            </form>
+          </div>
+
         </div>
 
         {/* Quick links */}

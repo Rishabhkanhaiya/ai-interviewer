@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Inter, JetBrains_Mono, IBM_Plex_Mono, Manrope } from 'next/font/google'
 import Script from 'next/script'
 import { PostHogProvider } from '@/lib/posthog-provider'
 import { PageViewTracker } from '@/components/PageViewTracker'
@@ -14,11 +14,25 @@ const inter = Inter({
   weight: ['300', '400', '500', '600', '700'],
 })
 
+const manrope = Manrope({
+  subsets: ['latin'],
+  variable: '--font-manrope',
+  display: 'swap',
+  weight: ['300', '400', '500', '600', '700', '800'],
+})
+
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
-  variable: '--font-mono',
+  variable: '--font-jetbrains-mono',
   display: 'swap',
-  weight: ['400'],
+  weight: ['400', '500', '600'],
+})
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  variable: '--font-ibm-mono',
+  display: 'swap',
+  weight: ['400', '500', '600'],
 })
 
 export const metadata: Metadata = {
@@ -66,18 +80,33 @@ const organizationSchema = {
   contactPoint: { '@type': 'ContactPoint', contactType: 'customer support', availableLanguage: ['English', 'Hindi'] },
 }
 
+import { ThemeProvider } from '@/components/ThemeProvider'
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${inter.variable} ${manrope.variable} ${jetbrainsMono.variable} ${ibmPlexMono.variable}`} suppressHydrationWarning>
       <head>
         <Script
           id="organization-schema"
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                let theme = localStorage.getItem('app-theme');
+                if (!theme) {
+                  theme = 'light';
+                }
+                document.documentElement.setAttribute('data-theme', theme);
+              } catch (e) {}
+            `,
+          }}
         />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#4F46E5" />
@@ -86,12 +115,19 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="InterviewAI" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
-      <body className="font-sans antialiased bg-gray-50 text-gray-900">
-        <PostHogProvider>
-          <PageViewTracker />
-          {children}
-        </PostHogProvider>
+      <body className="font-sans antialiased">
+        <ThemeProvider>
+          <PostHogProvider>
+            <PageViewTracker />
+            <div className="ambient-glows" aria-hidden="true">
+              <div className="ambient-glow top-right" />
+              <div className="ambient-glow bottom-left" />
+            </div>
+            {children}
+          </PostHogProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
 }
+

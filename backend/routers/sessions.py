@@ -92,6 +92,13 @@ async def start_session(
     """
     user_id = get_user_id_from_jwt(authorization)
     
+    # Maintenance mode check
+    from db.redis_client import get_redis
+    r = await get_redis()
+    maintenance = await r.get("system:maintenance_mode")
+    if maintenance == b"1" or maintenance == "1":
+        raise HTTPException(status_code=503, detail="Our AI is currently taking a coffee break. Please check back in 10 minutes.")
+
     # Rate limit check (max 10 starts per min)
     if not await check_rate_limit(user_id):
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Max 10 requests per minute.")
@@ -106,7 +113,22 @@ async def start_session(
 
     # Check active pack
     pack = get_active_pack(user_id)
-    pack_id = pack["id"] if pack else "free_pack_bypass"
+    if pack:
+        pack_id = pack["id"]
+    else:
+        # Create a dummy pack to bypass limits and satisfy the foreign key constraint
+        supabase = get_supabase()
+        dummy_pack = supabase.table("packs").insert({
+            "user_id": user_id,
+            "pack_type": "free_pack_bypass",
+            "rounds_total": 9999,
+            "rounds_used": 0,
+            "minutes_total": 99999,
+            "minutes_used": 0,
+            "payment_id": "bypass",
+            "order_id": "bypass"
+        }).execute()
+        pack_id = dummy_pack.data[0]["id"]
 
     # LIMIT BYPASS: Skipping the pack exhaustion checks for testing
     # if not pack:
@@ -127,10 +149,11 @@ async def start_session(
         "id": session_id,
         "user_id": user_id,
         "pack_id": pack_id,
-        "company": body.company.value,
+        "company": body.company,
         "role": body.role.value,
         "round_type": body.round_type.value,
         "language_pref": body.language_pref.value,
+        "camera_mode": body.camera_mode.value,
         "resume_text": body.resume_text,
         "status": "active",
     }).execute()
@@ -139,7 +162,7 @@ async def start_session(
     await increment_pack_rounds(pack_id)
 
     # Determine voice persona
-    persona_name = get_persona_for_round(body.round_type.value, body.company.value)
+    persona_name = get_persona_for_round(body.round_type.value, body.company)
     persona = VOICE_PERSONAS[persona_name]
 
     # Parse resume if present
@@ -151,9 +174,11 @@ async def start_session(
     # Save session config to Redis for the WebSocket to pick up
     from db.redis_client import set_session_state
     session_config = {
-        "company": body.company.value,
+        "company": body.company,
         "round_type": body.round_type.value,
         "language_pref": body.language_pref.value,
+        "camera_mode": body.camera_mode.value,
+        "pack_id": pack_id,
         "resume_text": body.resume_text,
         "parsed_resume": parsed_resume,
     }
@@ -162,7 +187,7 @@ async def start_session(
     return StartSessionResponse(
         session_id=session_id,
         voice_persona=f"{persona['display_name']} — {persona['role_label']}",
-        company_display_name=COMPANY_DISPLAY_NAMES.get(body.company.value, body.company.value),
+        company_display_name=COMPANY_DISPLAY_NAMES.get(body.company, body.company),
         stage=InterviewStage.INTRO,
     )
 

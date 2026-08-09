@@ -105,6 +105,25 @@ async def increment_pack_rounds(pack_id: str) -> int:
     await r.expire(key, 2592000)  # 30 days
     return int(new_count)
 
+async def refund_pack_round(pack_id: str) -> int:
+    """Decrement round counter for a pack if it was ended due to conduct."""
+    r = await get_redis()
+    key = f"pack:{pack_id}:rounds_used"
+    new_count = await r.decr(key)
+    # Ensure it doesn't drop below 0 just in case
+    if new_count < 0:
+        await r.set(key, 0)
+        new_count = 0
+    return int(new_count)
+
+async def refund_session_minutes(pack_id: str, minutes_to_refund: float) -> None:
+    """Refund minutes for a session ended prematurely."""
+    r = await get_redis()
+    pack_key = f"pack:{pack_id}:minutes_used"
+    new_minutes = await r.incrbyfloat(pack_key, -minutes_to_refund)
+    if new_minutes < 0:
+        await r.set(pack_key, 0)
+
 
 # ── Rate Limiting ────────────────────────────────────────────────────────────
 

@@ -61,9 +61,9 @@ function starLabel(score: number): string {
   return 'Weak'
 }
 function starColor(score: number): string {
-  if (score >= 4) return 'text-emerald-600 bg-emerald-50'
-  if (score >= 3) return 'text-amber-600 bg-amber-50'
-  return 'text-red-600 bg-red-50'
+  if (score >= 4) return 'score-excellent'
+  if (score >= 3) return 'score-good'
+  return 'score-poor'
 }
 function overallColor(score: number): string {
   if (score >= 80) return 'text-emerald-600'
@@ -71,17 +71,24 @@ function overallColor(score: number): string {
   return 'text-red-600'
 }
 
+function wpmBadge(wpm: number) {
+  if (!wpm) return { label: 'Unknown', color: 'bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]' }
+  if (wpm < 110) return { label: 'Too Slow', color: 'score-good' }
+  if (wpm > 160) return { label: 'Too Fast', color: 'score-poor' }
+  return { label: 'Perfect Pace', color: 'score-excellent' }
+}
+
 function StarBar({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs font-medium text-gray-500 w-8">{label}</span>
-      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+      <span className="text-xs font-medium text-[var(--color-text-tertiary)] w-8">{label}</span>
+      <div className="progress-track" style={{ flex: 1 }}>
         <div
-          className="h-full bg-indigo-500 rounded-full transition-all duration-700"
+          className="progress-fill"
           style={{ width: `${(value / 5) * 100}%` }}
         />
       </div>
-      <span className="text-xs font-semibold text-gray-700 w-8 text-right">{value}/5</span>
+      <span className="text-xs font-semibold text-[var(--color-text-primary)] w-8 text-right">{value}/5</span>
       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${starColor(value)}`}>
         {starLabel(value)}
       </span>
@@ -135,7 +142,7 @@ export default function ScorecardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
         <div className="text-sm text-gray-400">Loading your scorecard...</div>
       </div>
     )
@@ -143,7 +150,7 @@ export default function ScorecardPage() {
 
   if (error || !scorecard) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
         <div className="text-center">
           <p className="text-red-500 mb-4">{error || 'Scorecard unavailable'}</p>
           <Link href="/dashboard" className="text-indigo-600 text-sm hover:underline">← Back to dashboard</Link>
@@ -172,12 +179,14 @@ export default function ScorecardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 print:bg-white">
+    <div className="min-h-screen bg-[var(--color-bg)] print:bg-[var(--color-surface)]">
       {/* Print Styles */}
       <style>{`
         @media print {
           .no-print { display: none !important; }
           .print-break { page-break-before: always; }
+          .bg-[var(--color-surface)], .ui-card, .border { break-inside: avoid; page-break-inside: avoid; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
       `}</style>
       
@@ -187,18 +196,18 @@ export default function ScorecardPage() {
       )}
 
       {/* Top Bar */}
-      <div className="bg-white border-b border-black/8 px-6 py-4 flex items-center justify-between no-print">
+      <div className="bg-[var(--color-surface)] border-b border-[var(--color-border)] px-6 py-4 flex items-center justify-between no-print">
         <div className="flex items-center gap-4">
-          <button onClick={() => router.push('/dashboard')} className="text-sm text-gray-500 hover:text-gray-700">
+          <button onClick={() => router.push('/dashboard')} className="text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]">
             ← Dashboard
           </button>
           <span className="text-gray-300">|</span>
-          <span className="text-sm font-medium text-gray-700">Interview Scorecard</span>
+          <span className="text-sm font-medium text-[var(--color-text-primary)]">Interview Scorecard</span>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handlePrint}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] bg-[var(--color-surface-sunken)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-surface)] transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -220,7 +229,7 @@ export default function ScorecardPage() {
       <div ref={printRef} className="max-w-5xl mx-auto px-6 py-8 space-y-6">
 
         {/* ── Hero Score Card ──────────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-black/8 shadow-sm overflow-hidden">
+        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm overflow-hidden">
           <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-8 py-6 text-white">
             <div className="flex items-start justify-between">
               <div>
@@ -249,27 +258,33 @@ export default function ScorecardPage() {
 
           {/* Quick metrics strip */}
           <div className="grid grid-cols-4 divide-x divide-black/8">
+            <div className="px-6 py-4 text-center">
+              <div className={`text-2xl font-bold ${avgWpm >= 110 && avgWpm <= 160 ? 'text-emerald-600' : 'text-amber-600'}`}>{avgWpm}</div>
+              <div className="text-xs font-medium text-[var(--color-text-primary)] mt-0.5">Avg WPM</div>
+              <div className={`text-[10px] mt-1 inline-block px-2 py-0.5 rounded-full font-medium ${wpmBadge(avgWpm).color}`}>
+                {wpmBadge(avgWpm).label}
+              </div>
+            </div>
             {[
-              { label: 'Avg WPM', value: avgWpm, sub: 'words/min', good: avgWpm >= 120 && avgWpm <= 150 },
               { label: 'Filler Words', value: totalFillers, sub: 'total', good: totalFillers <= 5 },
               { label: 'Confidence', value: `${avgConfidence}%`, sub: 'avg speech clarity', good: avgConfidence >= 80 },
               { label: 'Questions', value: answers.length, sub: 'answered', good: true },
             ].map(m => (
               <div key={m.label} className="px-6 py-4 text-center">
                 <div className={`text-2xl font-bold ${m.good ? 'text-emerald-600' : 'text-amber-600'}`}>{m.value}</div>
-                <div className="text-xs font-medium text-gray-700 mt-0.5">{m.label}</div>
-                <div className="text-xs text-gray-400">{m.sub}</div>
+                <div className="text-xs font-medium text-[var(--color-text-primary)] mt-0.5">{m.label}</div>
+                <div className="text-[10px] text-gray-400 mt-1">{m.sub}</div>
               </div>
             ))}
           </div>
         </div>
 
         {/* ── STAR Analysis ────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6">
+        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="font-semibold text-gray-900">STAR Analysis</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Average scores across all your answers</p>
+              <h2 className="font-semibold text-[var(--color-text-primary)]">STAR Analysis</h2>
+              <p className="text-xs text-[var(--color-text-tertiary)] mt-0.5">Average scores across all your answers</p>
             </div>
 
           </div>
@@ -279,41 +294,41 @@ export default function ScorecardPage() {
             <StarBar label="A" value={avgStarA} />
             <StarBar label="R" value={avgStarR} />
           </div>
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500">
+          <div className="mt-4 p-3 bg-[var(--color-bg)] rounded-lg text-xs text-[var(--color-text-tertiary)]">
             <strong>S</strong> = Technical Depth &nbsp;·&nbsp; <strong>T</strong> = Comm Clarity &nbsp;·&nbsp; <strong>A</strong> = Structure &nbsp;·&nbsp; <strong>R</strong> = Specificity
           </div>
         </div>
 
         {/* ── Comprehensive Summary ─────────────────────────────────────────────── */}
         {session.comprehensive_summary && (
-          <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6 mb-6">
-            <h2 className="font-semibold text-gray-900 mb-2">Overall Performance Summary</h2>
-            <p className="text-sm text-gray-700 leading-relaxed">{session.comprehensive_summary}</p>
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm p-6 mb-6">
+            <h2 className="font-semibold text-[var(--color-text-primary)] mb-2">Overall Performance Summary</h2>
+            <p className="text-sm text-[var(--color-text-primary)] leading-relaxed">{session.comprehensive_summary}</p>
           </div>
         )}
 
         {/* ── Error Analysis ─────────────────────────────────────────────── */}
         {session.error_analysis && session.error_analysis.length > 0 && (
-          <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6">
-            <h2 className="font-semibold text-gray-900 mb-4">Critical Mistakes & Fixes</h2>
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm p-6">
+            <h2 className="font-semibold text-[var(--color-text-primary)] mb-4">Critical Mistakes & Fixes</h2>
             <div className="space-y-4">
               {session.error_analysis.map((err, i) => (
-                <div key={i} className="border border-red-100 bg-red-50/50 rounded-xl p-4">
+                <div key={i} className="border border-[var(--color-danger-subtle)] bg-[var(--color-danger-subtle)] rounded-xl p-4">
                   <div className="mb-2">
-                    <span className="text-xs font-bold text-red-600 uppercase tracking-wider">Mistake {i + 1}</span>
+                    <span className="text-xs font-bold text-[var(--color-danger)] uppercase tracking-wider">Mistake {i + 1}</span>
                   </div>
-                  <div className="bg-white border border-gray-100 rounded-lg p-3 text-sm text-gray-600 italic mb-3">
+                  <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-3 text-sm text-[var(--color-text-primary)] italic mb-3 shadow-sm">
                     "{err.quote}"
                   </div>
-                  <p className="text-sm text-gray-800 font-medium mb-1">Why it failed:</p>
-                  <p className="text-sm text-gray-600 mb-3">{err.mistake}</p>
+                  <p className="text-sm text-[var(--color-text-primary)] font-medium mb-1">Why it failed:</p>
+                  <p className="text-sm text-[var(--color-text-secondary)] mb-4">{err.mistake}</p>
                   
-                  <p className="text-sm text-emerald-700 font-medium mb-1">How to fix it:</p>
-                  <p className="text-sm text-emerald-600 mb-3">{err.fix}</p>
+                  <p className="text-sm text-[var(--color-success)] font-medium mb-1">How to fix it:</p>
+                  <p className="text-sm text-[var(--color-text-secondary)] mb-4">{err.fix}</p>
                   
                   {err.better_example && (
-                    <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-sm text-emerald-800">
-                      <strong>Better Example:</strong> "{err.better_example}"
+                    <div className="bg-[var(--color-success-subtle)] border border-[var(--color-success-subtle)] rounded-lg p-3 text-sm text-[var(--color-text-primary)]">
+                      <strong className="text-[var(--color-success)]">Better Example:</strong> "{err.better_example}"
                     </div>
                   )}
                 </div>
@@ -323,8 +338,8 @@ export default function ScorecardPage() {
         )}
 
         {/* ── Per-Question Breakdown ────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Question-by-question breakdown</h2>
+        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-sm p-6">
+          <h2 className="font-semibold text-[var(--color-text-primary)] mb-4">Question-by-question breakdown</h2>
           {answers.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No answers recorded for this session.</p>
           ) : (
@@ -338,7 +353,7 @@ export default function ScorecardPage() {
                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                       activeAnswer === i
                         ? 'bg-indigo-600 text-white font-medium'
-                        : 'text-gray-600 hover:bg-gray-50'
+                        : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg)]'
                     }`}
                   >
                     Q{a.question_number}
@@ -349,19 +364,19 @@ export default function ScorecardPage() {
 
               {/* Answer details */}
               {answers[activeAnswer] && (
-                <div className="flex-1 border border-black/8 rounded-xl p-5 space-y-4">
+                <div className="flex-1 border border-[var(--color-border)] rounded-xl p-5 space-y-4">
                   <div>
                     <div className="text-xs text-indigo-600 font-medium mb-1">Question {answers[activeAnswer].question_number}</div>
-                    <p className="text-sm font-semibold text-gray-900 leading-relaxed">
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)] leading-relaxed">
                       {answers[activeAnswer].question_text || 'Question text not recorded'}
                     </p>
                   </div>
 
                   {/* Transcript */}
                   {answers[activeAnswer].answer_transcript && (
-                    <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="bg-[var(--color-bg)] rounded-lg p-3">
                       <div className="text-xs font-medium text-gray-400 mb-1.5">Your answer</div>
-                      <p className="text-sm text-gray-700 leading-relaxed">
+                      <p className="text-sm text-[var(--color-text-primary)] leading-relaxed">
                         {answers[activeAnswer].answer_transcript}
                       </p>
                     </div>
@@ -377,16 +392,16 @@ export default function ScorecardPage() {
                         value: Object.values(answers[activeAnswer].filler_words || {}).reduce((s, c) => s + c, 0),
                       },
                     ].map(m => (
-                      <div key={m.label} className="bg-gray-50 rounded-lg p-3 text-center">
-                        <div className="font-semibold text-gray-900">{m.value}</div>
-                        <div className="text-xs text-gray-500">{m.label}</div>
+                      <div key={m.label} className="bg-[var(--color-bg)] rounded-lg p-3 text-center">
+                        <div className="font-semibold text-[var(--color-text-primary)]">{m.value}</div>
+                        <div className="text-xs text-[var(--color-text-tertiary)]">{m.label}</div>
                       </div>
                     ))}
                   </div>
 
                   {/* STAR scores */}
                   <div className="space-y-2">
-                    <div className="text-xs font-medium text-gray-500">STAR Scores</div>
+                    <div className="text-xs font-medium text-[var(--color-text-tertiary)]">STAR Scores</div>
                     <div className="grid grid-cols-4 gap-2">
                       {(['star_s', 'star_t', 'star_a', 'star_r'] as const).map((key, idx) => {
                         const labels = ['Technical', 'Clarity', 'Structure', 'Examples']
@@ -403,9 +418,9 @@ export default function ScorecardPage() {
 
                   {/* AI Feedback */}
                   {answers[activeAnswer].ai_feedback && (
-                    <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4">
-                      <div className="text-xs font-medium text-indigo-600 mb-1.5">AI Feedback</div>
-                      <p className="text-sm text-gray-700 leading-relaxed">
+                    <div className="bg-[var(--color-accent-subtle)] border border-[var(--color-accent-subtle)] rounded-lg p-4">
+                      <div className="text-xs font-medium text-[var(--color-accent-text)] mb-1.5">AI Feedback</div>
+                      <p className="text-sm text-[var(--color-text-primary)] leading-relaxed">
                         {answers[activeAnswer].ai_feedback}
                       </p>
                     </div>
@@ -414,10 +429,10 @@ export default function ScorecardPage() {
                   {/* Filler words breakdown */}
                   {Object.keys(answers[activeAnswer].filler_words || {}).length > 0 && (
                     <div>
-                      <div className="text-xs font-medium text-gray-500 mb-2">Filler words used</div>
+                      <div className="text-xs font-medium text-[var(--color-text-tertiary)] mb-2">Filler words used</div>
                       <div className="flex flex-wrap gap-1.5">
                         {Object.entries(answers[activeAnswer].filler_words).map(([word, count]) => (
-                          <span key={word} className="px-2 py-1 text-xs bg-amber-50 text-amber-700 rounded-full font-medium">
+                          <span key={word} className="px-2 py-1 text-xs bg-[var(--color-warning-subtle)] text-[var(--color-warning)] rounded-full font-medium">
                             "{word}" × {count}
                           </span>
                         ))}

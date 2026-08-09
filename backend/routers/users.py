@@ -2,9 +2,12 @@
 Users router — profile management, onboarding, pack status.
 """
 
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, File, UploadFile
+import io
+import PyPDF2
+import docx
 from db.supabase_client import get_supabase
-from models.schemas import UserOnboarding, UpdateProfileRequest, PackStatusResponse, PackStatus, PackType
+from models.schemas import UserOnboarding, UpdateProfileRequest, PackStatusResponse, PackStatus, PackType, TopicSuggestionRequest
 from routers.sessions import get_user_id_from_jwt, get_user_jwt_payload
 from db.redis_client import get_pack_minutes_used, get_pack_rounds_used
 
@@ -57,6 +60,43 @@ async def update_profile(body: UpdateProfileRequest, authorization: str = Header
     
     supabase.table("users").upsert(update_data).execute()
     return {"status": "ok"}
+
+
+@router.post("/profile/parse-resume")
+async def parse_resume(file: UploadFile = File(...), authorization: str = Header(...)):
+    """Parse resume from PDF/DOCX and return extracted text."""
+    get_user_jwt_payload(authorization) # verify auth
+    
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file uploaded")
+    
+    content = await file.read()
+    if len(content) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large. Max 2MB allowed.")
+
+    text = ""
+    try:
+        if file.filename.lower().endswith('.pdf'):
+            reader = PyPDF2.PdfReader(io.BytesIO(content))
+            for page in reader.pages:
+                text += page.extract_text() + "\n"
+        elif file.filename.lower().endswith('.docx'):
+            doc = docx.Document(io.BytesIO(content))
+            for para in doc.paragraphs:
+                text += para.text + "\n"
+        elif file.filename.lower().endswith('.txt'):
+            text = content.decode('utf-8')
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file format. Please upload PDF, DOCX, or TXT.")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
+        
+    text = text.strip()
+    # Truncate to 3000 chars to save AI processing cost
+    if len(text) > 3000:
+        text = text[:3000]
+        
+    return {"text": text}
 
 
 @router.delete("/me")
@@ -139,3 +179,19 @@ async def get_leaderboard(limit: int = 10, authorization: str = Header(...)):
         .execute()
     )
     return {"leaderboard": result.data or []}
+
+@router.post("/suggestions")
+async def submit_suggestion(body: TopicSuggestionRequest, authorization: str = Header(...)):
+    """Submit a topic suggestion."""
+    user_id = get_user_id_from_jwt(authorization)
+    supabase = get_supabase()
+    result = supabase.table("user_suggestions").insert({
+        "user_id": user_id,
+        "topic": body.topic,
+        "status": "new"
+    }).execute()
+    
+    if len(result.data) == 0:
+        raise HTTPException(status_code=500, detail="Failed to submit suggestion.")
+        
+    return {"message": "Suggestion submitted successfully."}

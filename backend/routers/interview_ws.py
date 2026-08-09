@@ -67,6 +67,11 @@ async def interview_websocket_handler(
     except Exception as e:
         print(f"[WS] FATAL ERROR in session {session_id}:")
         traceback.print_exc()
+        # Save whatever data we collected so the scorecard isn't empty
+        try:
+            await engine.save_partial_session()
+        except Exception as save_err:
+            print(f"[WS] Could not save partial session after fatal error: {save_err}")
         try:
             await websocket.send_json({
                 "type": "error",
@@ -211,7 +216,7 @@ async def handle_submit_answer(
         
         guardrail_response = get_guardrail_response(
             current_question=current_question,
-            persona_name=engine.persona["name"],
+            persona_name=engine.persona,  # engine.persona is a string returned by get_persona_for_round
             disruption_count=engine.disruption_count
         )
         
@@ -238,6 +243,26 @@ async def handle_submit_answer(
         
         return  # Don't process this as a real answer
     
+    # Check for conduct violations
+    conduct_res = await engine.check_conduct(stt_result.transcript)
+    if conduct_res:
+        audio_buffers = await text_to_speech_full(conduct_res["text"], engine.persona)
+        for i, audio_b64 in enumerate(audio_buffers or []):
+            await websocket.send_json({
+                "type": "question" if i == 0 else "question_audio_continuation",
+                "text": conduct_res["text"] if i == 0 else None,
+                "question_number": getattr(engine, 'question_number', 0),
+                "audio_base64": audio_b64,
+                "is_last": i == len(audio_buffers) - 1,
+            })
+        if conduct_res.get("end_session"):
+            await websocket.send_json({
+                "type": "session_end",
+                "session_id": session_id,
+                "reason": conduct_res.get("reason", "conduct_ended")
+            })
+        return  # Don't process this answer
+
     # Reset disruption count on valid answer
     engine.disruption_count = 0
 

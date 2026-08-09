@@ -271,7 +271,7 @@ function getErrorMessage(e: unknown, defaultMsg: string): string {
                     onKeyDown={e => {
                       if (e.key === 'Backspace' && !digit && i > 0) otpRefs.current[i-1]?.focus()
                     }}
-                    className="w-full h-12 text-center text-lg font-bold bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 uppercase"
+                    className="w-full h-12 text-center text-lg font-bold text-gray-900 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 uppercase"
                   />
                 ))}
               </div>

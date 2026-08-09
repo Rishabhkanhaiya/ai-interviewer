@@ -1,0 +1,350 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>InterviewAI Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#f7f9fb",
+                        "secondary-fixed": "#d8e3fb",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-tertiary": "#ffffff",
+                        "secondary-container": "#d5e0f8",
+                        "outline-variant": "#c7c4d8",
+                        "on-tertiary-container": "#67f4b7",
+                        "on-secondary-fixed": "#111c2d",
+                        "inverse-primary": "#c3c0ff",
+                        "on-error": "#ffffff",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-dim": "#d8dadc",
+                        "background": "#f7f9fb",
+                        "primary": "#3525cd",
+                        "on-surface-variant": "#464555",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#586377",
+                        "on-surface": "#191c1e",
+                        "inverse-surface": "#2d3133",
+                        "on-secondary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e6e8ea",
+                        "error": "#ba1a1a",
+                        "on-background": "#191c1e",
+                        "secondary": "#545f73",
+                        "on-primary-fixed": "#0f0069",
+                        "surface-tint": "#4d44e3",
+                        "on-secondary-fixed-variant": "#3c475a",
+                        "tertiary-container": "#006e4b",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-primary-container": "#dad7ff",
+                        "primary-container": "#4f46e5",
+                        "surface-container-highest": "#e0e3e5",
+                        "tertiary-fixed": "#6ffbbe",
+                        "outline": "#777587",
+                        "on-tertiary-fixed": "#002113",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "primary-fixed": "#e2dfff",
+                        "secondary-fixed-dim": "#bcc7de",
+                        "surface-bright": "#f7f9fb",
+                        "surface-variant": "#e0e3e5",
+                        "tertiary": "#005338",
+                        "surface-container": "#eceef0",
+                        "tertiary-fixed-dim": "#4edea3"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "8px",
+                        "lg": "8px",
+                        "xl": "12px",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-xs": "4px",
+                        "stack-sm": "8px",
+                        "gutter": "32px",
+                        "stack-xl": "48px",
+                        "margin-desktop": "48px",
+                        "stack-md": "16px",
+                        "stack-lg": "24px",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Manrope"],
+                        "label-lg": ["Manrope"],
+                        "body-md": ["Manrope"],
+                        "label-md": ["Manrope"],
+                        "headline-md": ["Manrope"],
+                        "headline-xl": ["Manrope"],
+                        "headline-lg": ["Manrope"],
+                        "body-sm": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["13px", { "lineHeight": "18px", "fontWeight": "600" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen flex">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-[260px] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-stack-lg z-40">
+<div class="px-8 mb-10">
+<h1 class="text-headline-md font-headline-md font-bold text-on-surface tracking-tight">InterviewAI</h1>
+</div>
+<nav class="flex-1 flex flex-col gap-1 px-4">
+<a class="flex items-center gap-4 px-4 py-3 bg-surface-container-low text-primary rounded-lg text-label-lg font-label-lg transition-colors border border-outline-variant" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 text-secondary hover:bg-surface-container-low hover:text-on-surface rounded-lg text-label-lg font-label-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">mic</span>
+                Start Interview
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 text-secondary hover:bg-surface-container-low hover:text-on-surface rounded-lg text-label-lg font-label-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">history</span>
+                My Sessions
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 text-secondary hover:bg-surface-container-low hover:text-on-surface rounded-lg text-label-lg font-label-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">shopping_bag</span>
+                Buy Pack
+            </a>
+<div class="my-4 border-t border-outline-variant mx-4"></div>
+<a class="flex items-center gap-4 px-4 py-3 text-secondary hover:bg-surface-container-low hover:text-on-surface rounded-lg text-label-lg font-label-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">group_add</span>
+                Refer &amp; Earn
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 text-secondary hover:bg-surface-container-low hover:text-on-surface rounded-lg text-label-lg font-label-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+                Resources
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 text-secondary hover:bg-surface-container-low hover:text-on-surface rounded-lg text-label-lg font-label-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+                Support
+            </a>
+</nav>
+<div class="mt-auto px-4">
+<a class="flex items-center gap-4 px-4 py-3 text-secondary hover:bg-surface-container-low hover:text-on-surface rounded-lg text-label-lg font-label-lg transition-colors" href="#">
+<img alt="User avatar" class="w-6 h-6 rounded-full object-cover border border-outline-variant" data-alt="A professional headshot of a young male professional in a modern office setting. The lighting is bright and clean, reflecting a high-trust, corporate modern aesthetic. The mood is confident and calm. High resolution." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBB8ahIryFxNeNq85_pr31_9llVwRV9Cj0r1EujlxxzYruuCtpJNXE9DKiFbR06BjZ1neMfxErHjTjpTExGjFlWUUHg9Vwvq8YQo-OwGF--73d5ADMJBt1HVpzcf62mc7xBlOKiRevu9EbrMUap0fFX9yQJr1z4q5Ivei9jWeSHafttTqLZWIPdH5p35ekjfvA9aNyfPos-oLFUHq4WFM40kh-YrTrmx_4n9sB35NTa3xGQTBrcsfgEig">
+                Rishabh
+            </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-[260px] flex-1 flex flex-col min-h-screen pb-stack-xl">
+<!-- TopNavBar (Web only, mobile hidden) -->
+<header class="hidden md:flex fixed top-0 left-[260px] right-0 h-[72px] bg-background/80 backdrop-blur-md z-30 justify-end items-center px-margin-desktop">
+<div class="flex items-center gap-6">
+<button class="text-secondary hover:text-on-surface transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[24px]">notifications</span>
+</button>
+<button class="text-secondary hover:text-on-surface transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+</button>
+</div>
+</header>
+<!-- Dashboard Canvas -->
+<div class="mt-[72px] px-margin-desktop max-w-container-max mx-auto w-full pt-8">
+<section class="mb-12 flex justify-between items-end">
+<div>
+<p class="text-label-md font-label-md text-secondary uppercase tracking-wider mb-2">Executive Summary</p>
+<h2 class="text-headline-xl font-headline-xl text-on-surface">Hey Rishabh, you're making steady progress.</h2>
+</div>
+<button class="bg-primary text-on-primary px-6 py-3 rounded-lg text-label-lg font-label-lg font-medium hover:bg-primary-container transition-colors flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                    Start New Session
+                </button>
+</section>
+<!-- Grid Layout -->
+<div class="grid grid-cols-12 gap-gutter mb-12">
+<!-- Current Streak -->
+<div class="col-span-12 md:col-span-4 lg:col-span-3 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col justify-between">
+<div class="flex items-center gap-3 text-secondary mb-6">
+<span class="material-symbols-outlined text-primary text-[20px]">local_fire_department</span>
+<h3 class="text-label-lg font-label-lg">Current Streak</h3>
+</div>
+<div>
+<p class="text-[40px] leading-tight font-bold text-on-surface tracking-tight">3 <span class="text-headline-md font-headline-md text-secondary font-normal">Days</span></p>
+</div>
+</div>
+<!-- Avg Score -->
+<div class="col-span-12 md:col-span-4 lg:col-span-3 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col justify-between relative overflow-hidden">
+<div class="flex items-center gap-3 text-secondary mb-6 relative z-10">
+<span class="material-symbols-outlined text-tertiary-container text-[20px]">trending_up</span>
+<h3 class="text-label-lg font-label-lg">Avg. Score</h3>
+</div>
+<div class="relative z-10">
+<p class="text-[40px] leading-tight font-bold text-on-surface tracking-tight">86<span class="text-headline-md font-headline-md text-secondary font-normal">%</span></p>
+</div>
+<!-- Minimal bar chart deco -->
+<div class="absolute bottom-0 left-0 right-0 h-16 flex items-end gap-1 px-6 opacity-20 pointer-events-none">
+<div class="w-full bg-primary h-[30%] rounded-t-sm"></div>
+<div class="w-full bg-primary h-[50%] rounded-t-sm"></div>
+<div class="w-full bg-primary h-[40%] rounded-t-sm"></div>
+<div class="w-full bg-primary h-[70%] rounded-t-sm"></div>
+<div class="w-full bg-primary h-[60%] rounded-t-sm"></div>
+<div class="w-full bg-primary h-[86%] rounded-t-sm"></div>
+</div>
+</div>
+<!-- Rounds Remaining Card -->
+<div class="col-span-12 md:col-span-4 lg:col-span-3 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-3 text-secondary mb-6">
+<span class="material-symbols-outlined text-[20px]">pie_chart</span>
+<h3 class="text-label-lg font-label-lg">Rounds Remaining</h3>
+</div>
+<p class="text-[40px] leading-tight font-bold text-on-surface tracking-tight mb-4">5 <span class="text-body-md font-body-md text-secondary font-normal">/ 10</span></p>
+</div>
+<div>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full mb-3">
+<div class="bg-primary h-1.5 rounded-full" style="width: 50%;"></div>
+</div>
+<p class="text-label-md font-label-md text-secondary uppercase tracking-wider">Pro Plan</p>
+</div>
+</div>
+<!-- Pro Tip / Next Step -->
+<div class="col-span-12 lg:col-span-3 bg-surface-container-low border border-outline-variant rounded-xl p-6 flex flex-col justify-between">
+<div class="flex items-center gap-3 text-primary mb-4">
+<span class="material-symbols-outlined text-[20px]">lightbulb</span>
+<h3 class="text-label-lg font-label-lg font-bold">Pro Tip</h3>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface mb-6 leading-relaxed">Review your last system design feedback before your next session to improve architecture proposals.</p>
+<a class="text-primary text-label-lg font-label-lg hover:underline inline-flex items-center gap-1" href="#">View Last Feedback <span class="material-symbols-outlined text-[16px]">arrow_forward</span></a>
+</div>
+</div>
+<!-- Deep Dive Area -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Performance Trends (New Section) -->
+<div class="col-span-12 lg:col-span-5 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col">
+<div class="mb-8">
+<h3 class="text-headline-md font-headline-md text-on-surface mb-1">Skill Breakdown</h3>
+<p class="text-body-sm font-body-sm text-secondary">Your performance across key competency areas.</p>
+</div>
+<div class="flex-1 flex flex-col justify-center gap-6">
+<!-- Skill Bar -->
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-label-lg font-label-lg text-on-surface">System Design</span>
+<span class="text-label-md font-label-md text-secondary">92%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full">
+<div class="bg-tertiary-container h-2 rounded-full" style="width: 92%;"></div>
+</div>
+</div>
+<!-- Skill Bar -->
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-label-lg font-label-lg text-on-surface">Leadership &amp; Behavioral</span>
+<span class="text-label-md font-label-md text-secondary">88%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full">
+<div class="bg-primary h-2 rounded-full" style="width: 88%;"></div>
+</div>
+</div>
+<!-- Skill Bar -->
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-label-lg font-label-lg text-on-surface">Algorithms &amp; Data Structures</span>
+<span class="text-label-md font-label-md text-secondary">78%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full">
+<div class="bg-secondary h-2 rounded-full" style="width: 78%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Sessions List -->
+<div class="col-span-12 lg:col-span-7 bg-surface-container-lowest border border-outline-variant rounded-xl p-6">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h3 class="text-headline-md font-headline-md text-on-surface mb-1">Recent Sessions</h3>
+<p class="text-body-sm font-body-sm text-secondary">History of your latest mock interviews.</p>
+</div>
+<a class="text-primary text-label-lg font-label-lg hover:underline" href="#">View All</a>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-surface-container-high">
+<th class="py-4 text-label-md font-label-md text-secondary uppercase tracking-wider font-normal">Company / Focus</th>
+<th class="py-4 text-label-md font-label-md text-secondary uppercase tracking-wider font-normal">Date</th>
+<th class="py-4 text-label-md font-label-md text-secondary uppercase tracking-wider font-normal text-right">Score</th>
+</tr>
+</thead>
+<tbody>
+<!-- Session Row -->
+<tr class="border-b border-surface-container-high hover:bg-surface-container-low transition-colors group">
+<td class="py-4">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 border border-outline-variant rounded-lg flex items-center justify-center bg-surface">
+<span class="text-label-lg font-bold text-on-surface">G</span>
+</div>
+<div>
+<p class="text-label-lg font-label-lg text-on-surface">Google</p>
+<p class="text-body-sm font-body-sm text-secondary">System Design Round</p>
+</div>
+</div>
+</td>
+<td class="py-4 text-body-sm font-body-sm text-secondary">Oct 24, 2023</td>
+<td class="py-4 text-right">
+<span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-tertiary-container/10 text-tertiary-container text-label-md font-label-md font-bold">92%</span>
+</td>
+</tr>
+<!-- Session Row -->
+<tr class="border-b border-surface-container-high hover:bg-surface-container-low transition-colors group">
+<td class="py-4">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 border border-outline-variant rounded-lg flex items-center justify-center bg-surface">
+<span class="text-label-lg font-bold text-on-surface">A</span>
+</div>
+<div>
+<p class="text-label-lg font-label-lg text-on-surface">Amazon</p>
+<p class="text-body-sm font-body-sm text-secondary">Leadership Principles</p>
+</div>
+</div>
+</td>
+<td class="py-4 text-body-sm font-body-sm text-secondary">Oct 21, 2023</td>
+<td class="py-4 text-right">
+<span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-primary/10 text-primary text-label-md font-label-md font-bold">88%</span>
+</td>
+</tr>
+<!-- Session Row -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-4">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 border border-outline-variant rounded-lg flex items-center justify-center bg-surface">
+<span class="text-label-lg font-bold text-on-surface">S</span>
+</div>
+<div>
+<p class="text-label-lg font-label-lg text-on-surface">Stripe</p>
+<p class="text-body-sm font-body-sm text-secondary">Coding Assessment</p>
+</div>
+</div>
+</td>
+<td class="py-4 text-body-sm font-body-sm text-secondary">Oct 15, 2023</td>
+<td class="py-4 text-right">
+<span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-outline-variant/30 text-on-surface text-label-md font-label-md font-bold">78%</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

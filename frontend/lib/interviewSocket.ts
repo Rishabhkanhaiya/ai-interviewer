@@ -114,7 +114,7 @@ export class InterviewSocketManager {
         };
 
         // Display text only on first segment (type === 'question') — prevents duplicates
-        if (text && question_number) {
+        if (text && question_number !== undefined) {
           this.onQuestionDisplay?.(text, question_number);
           this.onTranscriptUpdate?.({ speaker: 'ai', text, timestamp: Date.now() });
         }

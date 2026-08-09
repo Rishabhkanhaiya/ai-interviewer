@@ -6,18 +6,21 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { apiClient, type PackStatus, type Session } from '@/lib/api'
 import { PushNotificationManager } from '@/components/PushNotificationManager'
+import { Sidebar } from '@/components/ui/Sidebar'
+import { StatTile } from '@/components/ui/StatTile'
+import { TopBar } from '@/components/ui/TopBar'
+import { ScoreBadge } from '@/components/ui/StatusBadge'
+import { MonogramBadge } from '@/components/ui/Monogram'
+import { Trophy, Heart } from 'lucide-react'
 
 const COMPANY_LABELS: Record<string, string> = {
   tcs_nqt: 'TCS NQT', infosys: 'Infosys', wipro: 'Wipro',
-  accenture: 'Accenture', capgemini: 'Capgemini', startup_react: 'Startup',
+  accenture: 'Accenture', capgemini: 'Capgemini', startup_react: 'D2C Startup',
   faang: 'FAANG', hr_behavioral: 'HR Round', custom: 'Custom',
+  all_in_one: 'All-In-One',
 }
 
-function ScoreBadge({ score }: { score: number | null }) {
-  if (score === null) return <span className="text-xs text-gray-400">In progress</span>
-  const cls = score >= 80 ? 'score-excellent' : score >= 60 ? 'score-good' : 'score-poor'
-  return <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${cls}`}>{score}/100</span>
-}
+
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -49,10 +52,7 @@ export default function DashboardPage() {
         setLeaderboard(leaderboardRes.data.leaderboard || [])
       } catch (err: unknown) {
         const status = (err as { response?: { status?: number } })?.response?.status
-        if (status === 404) {
-          router.push('/auth?onboarding=true')
-          return
-        }
+        if (status === 404) { router.push('/auth?onboarding=true'); return }
       } finally {
         setLoading(false)
       }
@@ -65,251 +65,286 @@ export default function DashboardPage() {
     router.push('/')
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-sm text-gray-400">Loading...</div>
-      </div>
-    )
-  }
+
+
+  const packPct = packStatus?.pack
+    ? (packStatus.pack.minutes_used / packStatus.pack.minutes_total) * 100
+    : 0
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg)', display: 'flex' }}>
       <PushNotificationManager />
-      {/* Sidebar */}
-      <aside className="w-60 bg-white border-r border-black/8 flex flex-col py-6 px-4 gap-1 shrink-0">
-        <div className="flex items-center gap-2 px-3 mb-6">
-          <div className="w-7 h-7 bg-indigo-600 rounded-md flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-          </div>
-          <span className="font-bold text-gray-900 text-sm">InterviewAI</span>
-        </div>
 
-        {[
-          { href: '/dashboard', label: 'Dashboard', icon: '🏠' },
-          { href: '/interview/setup', label: 'Start Interview', icon: '🎤' },
-          { href: '/dashboard/history', label: 'My Sessions', icon: '📋' },
-          { href: '/buy', label: 'Buy Pack', icon: '💳' },
-          { href: '/affiliate', label: 'Refer & Earn', icon: '🔗' },
-          { href: '/blog', label: 'Blog & Resources', icon: '📝' },
-          { href: '/help', label: 'Help & FAQ', icon: '❓' },
-          { href: '/settings', label: 'Settings', icon: '⚙️' },
-        ].map(item => (
-          <Link key={item.href} href={item.href}
-            className="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-indigo-600 rounded-lg transition-colors">
-            <span>{item.icon}</span>
-            {item.label}
-          </Link>
-        ))}
+      {/* Sidebar — passes userName for real avatar */}
+      <Sidebar onSignOut={handleSignOut} userName={userName} />
 
-        <div className="mt-auto">
-          <button onClick={handleSignOut} className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:text-red-500 transition-colors">
-            Sign out
-          </button>
-        </div>
-      </aside>
+      {/* Right column: topbar + content */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+        <TopBar
+          breadcrumb="Dashboard"
+          action={
+            <Link 
+              href="/help"
+              style={{ 
+                height: 32, padding: '0 12px', fontSize: 13, fontWeight: 500, 
+                color: 'var(--color-text-secondary)', background: 'var(--color-surface-sunken)',
+                border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)',
+                display: 'flex', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s',
+                textDecoration: 'none'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = 'var(--color-ink)'
+                e.currentTarget.style.borderColor = 'var(--color-border-strong)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = 'var(--color-text-secondary)'
+                e.currentTarget.style.borderColor = 'var(--color-border)'
+              }}
+            >
+              Need help?
+            </Link>
+          }
+        />
 
-      {/* Main Content */}
-      <main className="flex-1 p-8 overflow-y-auto">
-        <div className="max-w-4xl mx-auto space-y-6">
-
-          {/* Header */}
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              {userName ? `Hey ${userName.split(' ')[0]} 👋` : 'Dashboard'}
-            </h1>
-            <p className="text-sm text-gray-500 mt-0.5">Ready for your next mock interview?</p>
-          </div>
-
-          {/* Stats Row */}
-          {profile && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white rounded-xl border border-black/8 p-4 shadow-sm flex flex-col justify-center" title="Continuous days of practice">
-                <div className="text-sm text-gray-500 font-medium flex items-center gap-2">
-                  <span>🔥</span> Current Streak
-                </div>
-                <div className="text-2xl font-bold text-gray-900 mt-1">{profile.current_streak || 0} days</div>
-              </div>
-              <div className="bg-white rounded-xl border border-black/8 p-4 shadow-sm flex flex-col justify-center" title="Your all-time longest practice streak">
-                <div className="text-sm text-gray-500 font-medium flex items-center gap-2">
-                  <span>⭐</span> Longest Streak
-                </div>
-                <div className="text-2xl font-bold text-gray-900 mt-1">{profile.longest_streak || 0} days</div>
-              </div>
-              <div className="bg-white rounded-xl border border-black/8 p-4 shadow-sm flex flex-col justify-center" title="Your highest score across all completed sessions">
-                <div className="text-sm text-gray-500 font-medium flex items-center gap-2">
-                  <span>🏆</span> Personal Best
-                </div>
-                <div className="text-2xl font-bold text-gray-900 mt-1">{profile.best_score || 0}/100</div>
-              </div>
-              <div className="bg-white rounded-xl border border-black/8 p-4 shadow-sm flex flex-col justify-center">
-                <div className="text-sm text-gray-500 font-medium flex items-center gap-2">
-                  <span>🎤</span> Sessions Taken
-                </div>
-                <div className="text-2xl font-bold text-gray-900 mt-1">{totalSessions}</div>
-              </div>
-            </div>
-          )}
-
-          {/* Pack Status Banner */}
-          {packStatus?.has_active_pack && packStatus.pack ? (
-            <div className="bg-indigo-600 rounded-2xl p-5 text-white">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <div className="font-semibold text-lg">
-                    {packStatus.pack.rounds_remaining} rounds remaining
-                  </div>
-                  <div className="text-indigo-200 text-sm">
-                    {Math.round(packStatus.pack.minutes_remaining)} minutes left in pack
-                  </div>
-                </div>
-                <Link href="/interview/setup"
-                  className="px-4 py-2 bg-white text-indigo-600 font-semibold text-sm rounded-lg hover:bg-indigo-50 transition-colors">
-                  Start now →
-                </Link>
-              </div>
-              {/* Progress bar */}
-              <div className="w-full bg-indigo-500 rounded-full h-1.5 overflow-hidden">
-                <div
-                  className="bg-white h-full rounded-full transition-all"
-                  style={{ width: `${(packStatus.pack.minutes_used / packStatus.pack.minutes_total) * 100}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-indigo-200 mt-1">
-                <span>{Math.round(packStatus.pack.minutes_used)} min used</span>
-                <span>{packStatus.pack.minutes_total} min total</span>
-              </div>
+        <main style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
+          {loading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>Loading dashboard...</div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-5 flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-gray-900">No active pack</div>
-                <div className="text-sm text-gray-500">Get 10 full interview rounds for ₹499</div>
-              </div>
-              <Link href="/buy"
-                className="px-4 py-2 bg-indigo-600 text-white font-semibold text-sm rounded-lg hover:bg-indigo-700 transition-colors">
-                Buy ₹499 pack →
-              </Link>
-            </div>
-          )}
+          <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-          {/* Quick Start */}
-          <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6">
-            <h2 className="font-semibold text-gray-900 mb-4">Quick start</h2>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-2xl shrink-0">
-                🎤
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-gray-900">Start a new mock interview</div>
-                <div className="text-xs text-gray-500 mt-0.5">Choose company, round type, and paste your resume</div>
-              </div>
-              <Link href="/interview/setup"
-                className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors shrink-0">
-                Begin →
-              </Link>
-            </div>
-          </div>
-
-          {/* Recent Sessions */}
-          <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-900">Recent sessions</h2>
-              <Link href="/dashboard/history" className="text-sm text-indigo-600 hover:text-indigo-700">
-                View all →
-              </Link>
+            {/* Greeting */}
+            <div>
+              <h1 style={{ fontSize: 24, fontWeight: 600, color: 'var(--color-ink)', margin: 0, letterSpacing: '-0.01em' }}>
+                {userName ? `Hey ${userName.split(' ')[0]} 👋` : 'Dashboard'}
+              </h1>
+              <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginTop: 4 }}>
+                Ready for your next mock interview?
+              </p>
             </div>
 
-            {sessions.length === 0 ? (
-              <div className="text-center py-8 text-sm text-gray-400">
-                No sessions yet. Start your first interview above.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {sessions.map(session => (
-                  <div key={session.id} className="flex items-center gap-4 p-3 rounded-xl border border-black/5 hover:bg-gray-50 transition-colors">
-                    <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-sm font-bold text-indigo-600 shrink-0">
-                      {COMPANY_LABELS[session.company]?.slice(0, 2) || '??'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 truncate">
-                        {COMPANY_LABELS[session.company] || session.company}
-                      </div>
-                      <div className="text-xs text-gray-400 capitalize">
-                        {session.round_type} · {new Date(session.started_at).toLocaleDateString('en-IN')}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <ScoreBadge score={session.overall_score ?? null} />
-                      <Link href={`/interview/scorecard/${session.id}`}
-                        className="text-xs text-indigo-600 hover:text-indigo-700">
-                        View →
-                      </Link>
-                    </div>
-                  </div>
-                ))}
+            {/* Stat tiles */}
+            {profile && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                <StatTile
+                  type="streak"
+                  label="Current Streak"
+                  numericValue={profile.current_streak || 0}
+                  unit=" days"
+                />
+                <StatTile
+                  type="longest"
+                  label="Longest Streak"
+                  numericValue={profile.longest_streak || 0}
+                  unit=" days"
+                />
+                <StatTile
+                  type="best"
+                  label="Personal Best"
+                  numericValue={profile.best_score || 0}
+                  unit="/100"
+                />
+                <StatTile
+                  type="sessions"
+                  label="Sessions Taken"
+                  numericValue={totalSessions}
+                />
               </div>
             )}
-          </div>
 
-          {/* Top 10 Leaderboard */}
-          <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-                <span>🏆</span> Top 10 Leaderboard
-              </h2>
-            </div>
-            
-            {leaderboard.length === 0 ? (
-              <div className="text-center py-8 text-sm text-gray-400">
-                No scores yet. Be the first to get on the board!
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {leaderboard.map((user, idx) => (
-                  <div key={user.id} className="flex items-center gap-4 p-3 rounded-xl border border-black/5 hover:bg-gray-50 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold shrink-0 text-sm">
-                      #{idx + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 truncate">
-                        {user.name || 'Anonymous User'}
+            {/* Pack status banner */}
+            {packStatus?.has_active_pack && packStatus.pack ? (
+              <div className="ui-card" style={{ padding: '20px 24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div>
+                    {/* Number in mono, words in Inter */}
+                    <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div>
+                        <span className="num">{packStatus.pack.rounds_remaining}</span>
+                        <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, color: 'var(--color-text-secondary)', marginLeft: 4 }}>
+                          rounds remaining
+                        </span>
                       </div>
-                      <div className="text-xs text-gray-400 truncate">
-                        {user.college || 'No college specified'}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <div className="text-sm font-bold text-gray-900">{user.best_score}/100</div>
-                      {user.current_streak > 0 && (
-                        <div className="text-xs font-medium text-orange-500">
-                          🔥 {user.current_streak} streak
-                        </div>
+                      {packStatus.pack.rounds_remaining === 1 && (
+                        <span style={{ fontSize: 11, background: 'var(--color-warning-subtle)', color: 'var(--color-warning)', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>
+                          Last Round Remaining!
+                        </span>
                       )}
                     </div>
+                    <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 3 }}>
+                      <span className="num">{Math.round(packStatus.pack.minutes_remaining)}</span>
+                      <span style={{ fontFamily: 'var(--font-sans)' }}> min left in pack</span>
+                    </div>
                   </div>
-                ))}
+                  {/* CTA with waveform signature */}
+                  {packStatus.pack.rounds_remaining === 0 ? (
+                    <Link
+                      href="/buy?topup=true"
+                      className="btn-primary"
+                    >
+                      Top Up for ₹199
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/interview/setup"
+                      className="btn-primary"
+                    >
+                      Start now
+                    </Link>
+                  )}
+                </div>
+                <div className="progress-track">
+                  <div className="progress-fill" style={{ width: `${packPct}%` }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--color-text-tertiary)' }}>
+                  <span><span className="num">{Math.round(packStatus.pack.minutes_used)}</span> min used</span>
+                  <span><span className="num">{packStatus.pack.minutes_total}</span> min total</span>
+                </div>
+              </div>
+            ) : (
+              <div className="ui-card" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)' }}>No active pack</div>
+                  <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                    Get <span className="num">10</span> full interview rounds for <span className="num">₹499</span>
+                  </div>
+                </div>
+                <Link href="/buy" className="btn-primary">Buy ₹499 pack →</Link>
               </div>
             )}
-          </div>
 
-          {/* Upcoming Drive Banner */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
-            <span className="text-xl">📅</span>
-            <div>
-              <div className="text-sm font-semibold text-amber-800">TCS NQT season is live</div>
-              <div className="text-xs text-amber-600">Practice the TCS NQT pack to be fully prepared</div>
+            {/* Recent sessions */}
+            <div className="ui-card" style={{ overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
+                <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', margin: 0 }}>Recent sessions</h2>
+                <Link href="/dashboard/history" style={{ fontSize: 13, color: 'var(--color-accent-text)', textDecoration: 'none', fontWeight: 500 }}>
+                  View all →
+                </Link>
+              </div>
+
+              {sessions.length === 0 ? (
+                <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 14, color: 'var(--color-text-tertiary)' }}>
+                  No sessions yet. Start your first interview above.
+                </div>
+              ) : (
+                <div>
+                  {sessions.map((session, idx) => (
+                    <div
+                      key={session.id}
+                      className="ui-card-row"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 14,
+                        padding: '12px 20px',
+                        borderBottom: idx < sessions.length - 1 ? '1px solid var(--color-border)' : 'none',
+                        cursor: 'default',
+                      }}
+                    >
+                      <MonogramBadge name={COMPANY_LABELS[session.company] || session.company} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {COMPANY_LABELS[session.company] || session.company}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', textTransform: 'capitalize', marginTop: 1 }}>
+                          {session.round_type} · {new Date(session.started_at).toLocaleDateString('en-IN')}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                        {/* "Pending" for missing scores — not a badge, just text */}
+                        {(session.overall_score === null || session.overall_score === undefined)
+                          ? <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>Pending</span>
+                          : <ScoreBadge score={session.overall_score} />
+                        }
+                        <Link href={`/interview/scorecard/${session.id}`}
+                          style={{ fontSize: 13, color: 'var(--color-accent-text)', textDecoration: 'none', fontWeight: 500 }}>
+                          View →
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <Link href="/interview/setup?company=tcs_nqt"
-              className="ml-auto text-xs font-semibold text-amber-700 bg-amber-100 px-3 py-1.5 rounded-lg hover:bg-amber-200 transition-colors shrink-0">
-              Practice TCS →
-            </Link>
-          </div>
 
-        </div>
-      </main>
+            {/* Leaderboard */}
+            <div className="ui-card" style={{ overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
+                <Trophy size={15} strokeWidth={1.75} style={{ color: 'var(--color-text-tertiary)' }} />
+                <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', margin: 0 }}>Top 10 Leaderboard</h2>
+              </div>
+              {leaderboard.length === 0 ? (
+                <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 14, color: 'var(--color-text-tertiary)' }}>
+                  No scores yet. Be the first to get on the board!
+                </div>
+              ) : (
+                <div>
+                  {leaderboard.map((user, idx) => (
+                    <div key={user.id} className="ui-card-row" style={{
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      padding: '10px 20px',
+                      borderBottom: idx < leaderboard.length - 1 ? '1px solid var(--color-border)' : 'none',
+                    }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%',
+                        background: idx < 3 ? 'var(--color-warning-subtle)' : 'var(--color-surface-sunken)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 11, fontWeight: 700, flexShrink: 0,
+                        color: idx < 3 ? 'var(--color-warning)' : 'var(--color-text-tertiary)',
+                        fontFamily: 'var(--font-mono)',
+                      }}>
+                        {idx + 1}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {user.name || 'Anonymous'}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {user.college || '—'}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 14, color: 'var(--color-ink)' }}>
+                          {user.best_score}<span style={{ fontFamily: 'var(--font-sans)', fontWeight: 400, fontSize: 12, color: 'var(--color-text-secondary)' }}>/100</span>
+                        </span>
+                        {user.current_streak > 0 && (
+                          <span style={{ fontSize: 11, color: 'var(--color-warning)', fontWeight: 500 }}>
+                            {user.current_streak} day streak
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Referral banner */}
+            <div style={{
+              background: 'linear-gradient(to right, var(--color-surface-sunken), var(--color-surface))',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '16px 24px',
+              display: 'flex', alignItems: 'center', gap: 14,
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  Love InterviewAI? <Heart size={18} className="text-rose-500 fill-rose-500" />
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 4 }}>Refer your friends and earn rewards for every successful referral!</div>
+              </div>
+              <Link href="/affiliate"
+                style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-surface)', background: 'var(--color-ink)', border: 'none', padding: '10px 18px', borderRadius: 'var(--radius-sm)', textDecoration: 'none', flexShrink: 0, transition: 'opacity var(--transition-fast)' }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              >
+                Get Invite Link →
+              </Link>
+            </div>
+
+          </div>
+          )}
+        </main>
+      </div>
     </div>
   )
 }

@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 
 from config import get_settings
-from routers import sessions, payments, users, affiliates, admin, drives, email_triggers, notifications, b2b
+from routers import sessions, payments, users, affiliates, admin, drives, email_triggers, notifications, b2b, posts
 from routers.interview_ws import interview_websocket_handler
 from db.redis_client import check_rate_limit, check_concurrent_sessions
 from db.supabase_client import get_supabase
@@ -59,6 +59,7 @@ app.include_router(drives.router)
 app.include_router(email_triggers.router)
 app.include_router(notifications.router)
 app.include_router(b2b.router)
+app.include_router(posts.router)
 
 
 # ── Health Check ─────────────────────────────────────────────────────────────

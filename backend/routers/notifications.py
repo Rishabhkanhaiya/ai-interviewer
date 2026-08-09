@@ -75,3 +75,92 @@ async def test_push(authorization: str = Header(...)):
                 supabase.table("push_subscriptions").delete().eq("id", sub["id"]).execute()
                 
     return {"status": "success", "sent": len(subs.data)}
+
+# ── In-App Notifications ─────────────────────────────────────────────────────────
+
+from pydantic import BaseModel
+from typing import Optional, List
+
+class AdminNotificationRequest(BaseModel):
+    title: str
+    message: str
+    link: Optional[str] = None
+    type: str = "system"
+    user_id: Optional[str] = None # if None, it's a global broadcast
+
+@router.get("/in-app")
+async def get_in_app_notifications(authorization: str = Header(...)):
+    user_id = get_user_id_from_jwt(authorization)
+    supabase = get_supabase()
+    
+    # Fetch all global notifications OR notifications specific to this user
+    # Note: RLS allows this via `user_id IS NULL OR user_id = auth.uid()`
+    # But since we use the service role (get_supabase returns admin client usually), 
+    # we explicitly filter here.
+    notifs = supabase.table("in_app_notifications").select("*") \
+        .or_(f"user_id.eq.{user_id},user_id.is.null") \
+        .order("created_at", desc=True) \
+        .limit(50) \
+        .execute()
+        
+    # Fetch which notifications the user has read
+    reads = supabase.table("in_app_notification_reads").select("notification_id") \
+        .eq("user_id", user_id) \
+        .execute()
+        
+    read_ids = set([r["notification_id"] for r in reads.data]) if reads.data else set()
+    
+    results = []
+    unread_count = 0
+    for n in (notifs.data or []):
+        is_read = n["id"] in read_ids
+        if not is_read:
+            unread_count += 1
+        results.append({
+            **n,
+            "is_read": is_read
+        })
+        
+    return {"notifications": results, "unread_count": unread_count}
+
+@router.post("/in-app/{notification_id}/read")
+async def mark_notification_read(notification_id: str, authorization: str = Header(...)):
+    user_id = get_user_id_from_jwt(authorization)
+    supabase = get_supabase()
+    
+    try:
+        supabase.table("in_app_notification_reads").insert({
+            "user_id": user_id,
+            "notification_id": notification_id
+        }).execute()
+    except Exception as e:
+        # Ignore if already marked read (duplicate key)
+        pass
+        
+    return {"status": "success"}
+
+@router.post("/in-app/admin-send")
+async def send_admin_notification(
+    req: AdminNotificationRequest,
+    authorization: str = Header(...)
+):
+    user_id = get_user_id_from_jwt(authorization)
+    supabase = get_supabase()
+    
+    # Verify Admin
+    user = supabase.table("users").select("is_admin, email").eq("id", user_id).execute()
+    if not user.data or not user.data[0].get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+        
+    payload = {
+        "title": req.title,
+        "message": req.message,
+        "type": req.type,
+    }
+    if req.link:
+        payload["link"] = req.link
+    if req.user_id:
+        payload["user_id"] = req.user_id
+        
+    supabase.table("in_app_notifications").insert(payload).execute()
+    return {"status": "success"}

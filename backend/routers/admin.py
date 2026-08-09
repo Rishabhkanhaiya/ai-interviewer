@@ -3,6 +3,7 @@ Admin router — internal dashboard metrics. Restricted to team emails only.
 """
 
 from fastapi import APIRouter, HTTPException, Header
+from pydantic import BaseModel
 from db.supabase_client import get_supabase
 from db.redis_client import get_redis
 from config import get_settings
@@ -17,11 +18,11 @@ ADMIN_EMAILS = [e.strip() for e in settings.admin_emails.split(",")]
 
 
 async def require_admin(authorization: str) -> str:
-    """Verify caller is a team member."""
+    """Verify caller is an admin."""
     user_id = get_user_id_from_jwt(authorization)
     supabase = get_supabase()
-    user = supabase.table("users").select("email").eq("id", user_id).single().execute()
-    if not user.data or user.data.get("email") not in ADMIN_EMAILS:
+    user = supabase.table("users").select("is_admin").eq("id", user_id).single().execute()
+    if not user.data or not user.data.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admin access required")
     return user_id
 
@@ -40,12 +41,20 @@ async def get_metrics(authorization: str = Header(...)):
     payments = supabase.table("payments").select("amount_paise, created_at").eq("status", "completed").execute()
     total_revenue_paise = sum(p["amount_paise"] for p in (payments.data or []))
 
-    # Session count
-    sessions = supabase.table("sessions").select("id, started_at").execute()
+    # Session count and duration
+    sessions = supabase.table("sessions").select("id, started_at, duration_seconds").execute()
     total_sessions = len(sessions.data or [])
-
-    # API cost estimate (sessions × ₹15.80 = 1580 paise)
-    api_cost_paise = total_sessions * 1580
+    
+    # Calculate API cost based on time (duration) rather than a flat fee per session
+    # Assume 100 paise (₹1.00) per minute of usage (1.66 paise per second)
+    total_duration_seconds = sum(s.get("duration_seconds") or 0 for s in (sessions.data or []))
+    
+    # For sessions without a recorded duration (e.g. still active), assume 5 minutes (300 seconds) average
+    sessions_without_duration = sum(1 for s in (sessions.data or []) if not s.get("duration_seconds"))
+    estimated_total_seconds = total_duration_seconds + (sessions_without_duration * 300)
+    
+    # Cost = 100 paise per 60 seconds
+    api_cost_paise = int((estimated_total_seconds / 60) * 100)
 
     # Net margin estimate
     net_paise = total_revenue_paise - api_cost_paise
@@ -100,6 +109,21 @@ async def approve_payout(payout_id: str, authorization: str = Header(...)):
             supabase.table("affiliates").update({"total_paid_paise": new_paid}).eq("id", payout.data["affiliate_id"]).execute()
 
     return {"status": "paid"}
+
+
+class MaintenanceRequest(BaseModel):
+    enabled: bool
+
+@router.post("/maintenance")
+async def toggle_maintenance(req: MaintenanceRequest, authorization: str = Header(...)):
+    """Toggle maintenance mode (kill switch)."""
+    await require_admin(authorization)
+    r = await get_redis()
+    if req.enabled:
+        await r.set("system:maintenance_mode", "1")
+    else:
+        await r.set("system:maintenance_mode", "0")
+    return {"status": "success", "maintenance_mode": req.enabled}
 
 
 @router.get("/affiliate-applications")
