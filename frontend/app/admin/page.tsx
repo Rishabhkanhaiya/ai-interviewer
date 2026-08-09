@@ -229,7 +229,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <button
                   disabled={toggling}
-                  onClick={toggleMaintenance}
+                  onClick={handleToggleMaintenance}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${maintenanceMode ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-700 text-white hover:bg-gray-600'} disabled:opacity-50`}
                 >
                   {toggling ? 'Updating...' : maintenanceMode ? 'Turn Off' : 'Turn On'}
