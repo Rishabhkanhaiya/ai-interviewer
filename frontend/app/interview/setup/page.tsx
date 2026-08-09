@@ -438,7 +438,7 @@ export default function InterviewSetupPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <button
                         onClick={() => setCameraMode('video')}
-                        className={`p-5 text-left border rounded-2xl transition-all relative ${cameraMode === 'video' ? 'border-indigo-500 ring-1 ring-indigo-500 dark:ring-indigo-400 bg-indigo-50 dark:bg-indigo-500/10/20 shadow-md shadow-indigo-100/50 dark:shadow-indigo-900/20' : 'border-[var(--color-border-strong)] hover:border-[var(--color-border-strong)] bg-[var(--color-surface)] hover:shadow-sm'}`}
+                        className={`p-5 text-left border rounded-2xl transition-all relative ${cameraMode === 'video' ? 'border-indigo-500 ring-1 ring-indigo-500 dark:ring-indigo-400 bg-indigo-50 dark:bg-indigo-500/20 shadow-md shadow-indigo-100/50 dark:shadow-indigo-900/20' : 'border-[var(--color-border-strong)] hover:border-[var(--color-border-strong)] bg-[var(--color-surface)] hover:shadow-sm'}`}
                       >
                         {cameraMode === 'video' && <CheckCircle className="w-4 h-4 text-indigo-500 dark:text-indigo-400 absolute top-4 right-4" />}
                         <Video className={`w-5 h-5 mb-3 ${cameraMode === 'video' ? 'text-[var(--color-accent)]' : 'text-gray-400'}`} />
@@ -447,7 +447,7 @@ export default function InterviewSetupPage() {
                       </button>
                       <button
                         onClick={() => setCameraMode('audio_only')}
-                        className={`p-5 text-left border rounded-2xl transition-all relative ${cameraMode === 'audio_only' ? 'border-indigo-500 ring-1 ring-indigo-500 dark:ring-indigo-400 bg-indigo-50 dark:bg-indigo-500/10/20 shadow-md shadow-indigo-100/50 dark:shadow-indigo-900/20' : 'border-[var(--color-border-strong)] hover:border-[var(--color-border-strong)] bg-[var(--color-surface)] hover:shadow-sm'}`}
+                        className={`p-5 text-left border rounded-2xl transition-all relative ${cameraMode === 'audio_only' ? 'border-indigo-500 ring-1 ring-indigo-500 dark:ring-indigo-400 bg-indigo-50 dark:bg-indigo-500/20 shadow-md shadow-indigo-100/50 dark:shadow-indigo-900/20' : 'border-[var(--color-border-strong)] hover:border-[var(--color-border-strong)] bg-[var(--color-surface)] hover:shadow-sm'}`}
                       >
                         {cameraMode === 'audio_only' && <CheckCircle className="w-4 h-4 text-indigo-500 dark:text-indigo-400 absolute top-4 right-4" />}
                         <Mic className={`w-5 h-5 mb-3 ${cameraMode === 'audio_only' ? 'text-[var(--color-accent)]' : 'text-gray-400'}`} />
@@ -530,7 +530,7 @@ export default function InterviewSetupPage() {
                           key={l.id}
                           onClick={() => setLanguage(l.id)}
                           className={`w-full p-4 text-left flex items-center gap-3 border rounded-xl transition-all ${
-                            language === l.id ? 'border-indigo-500 ring-1 ring-indigo-500 dark:ring-indigo-400 bg-indigo-50 dark:bg-indigo-500/10/20 shadow-sm' : 'border-[var(--color-border-strong)] hover:border-[var(--color-border-strong)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-sunken)]/50'
+                            language === l.id ? 'border-indigo-500 ring-1 ring-indigo-500 dark:ring-indigo-400 bg-indigo-50 dark:bg-indigo-500/20 shadow-sm' : 'border-[var(--color-border-strong)] hover:border-[var(--color-border-strong)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-sunken)]/50'
                           }`}
                         >
                           <span className="text-xl">{l.icon}</span>
