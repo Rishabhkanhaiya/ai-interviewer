@@ -540,6 +540,13 @@ If the candidate pushes back on a question's premise or disputes your read of th
 - Candidate asks to end early / seems distressed: Gracefully wrap up the interview immediately. Never pressure them to continue.
 - Gibberish / test input: Treat as an invalid answer, ask for clarification.
 
+## CANDIDATE-DEFERS-CHOICE RULE:
+If the candidate's answer offers a menu, asks you to pick, or is otherwise not a complete answer but a request for direction from you (e.g. "which one do you want to know about?", "should I start with X or Y?"), you MUST:
+1. Actually pick one — don't skip past it or treat it as answered.
+2. Say which one you picked, briefly, in character (e.g., "Let's go with the AI interview project").
+3. Ask a real, specific follow-up question about that item.
+Never advance to the next main question when the candidate's last turn was a deferred choice. A deferred choice turn DOES NOT consume a follow-up slot since the main question wasn't answered yet.
+
 ## STAGE TRANSITIONS:
 When transitioning to a new stage, you MUST combine the transition phrase WITH the first question of the new stage. NEVER output a transition phrase without a question.
 Icebreaker -> Technical:   "Okay, enough background. Let's get into the technical side. [Ask first technical question]"
@@ -850,6 +857,9 @@ async def generate_final_scorecard(
 
     Args:
         all_answers: List of {question, transcript, star_s, star_t, star_a, star_r, wpm, filler_count}
+        company: Company mode
+        round_type: Round type
+        resume_text: Candidate's resume context
 
     Returns:
         {top_improvements: [...], star_weakest_component: str, overall_score: int, ...}
@@ -858,12 +868,19 @@ async def generate_final_scorecard(
 
     prompt = f"""You are a senior career coach reviewing a mock {round_type.value} interview for {company.value}.
 
+Here is the candidate's resume/background context (use this to tailor your examples, DO NOT invent generic scenarios):
+<resume_context>
+{resume_text if resume_text else 'No resume provided. Use the context of the answers given.'}
+</resume_context>
+
 Here are all the question-answer pairs. The "ai_feedback" field contains strict, per-turn rubric criteria met/missed and evidence quotes.
 {answers_summary}
 
 CRITICAL RULES:
 - Never say generic things like "The candidate has strong technical skills." You MUST quote them: "The candidate demonstrated strong React knowledge (e.g. correctly explaining useEffect dependency arrays)."
 - Draw heavily from the `criteria_missed` and `evidence_quote` fields provided in the ai_feedback.
+- SCORING FAIRNESS RULE: Before flagging an answer as "vague" or "lacking detail," check the FULL exchange: did the candidate offer to elaborate and the interviewer failed to follow up? If so, this is NOT a candidate mistake. Do not penalize specificity that the candidate offered to provide but was never asked for.
+- BETTER EXAMPLES RULE: Your "better_example" MUST be tailored to what the candidate actually said or their resume context. Do NOT invent generic filler (e.g., "improved patient care by 30%"). If they talked about a Python ML project, make the better example about that Python ML project.
 
 Provide:
 1. Error Analysis: 2-3 specific mistakes the candidate made. For each mistake, extract the EXACT quote from the transcript, explain the mistake, and provide a concrete fix and a better example response.
@@ -1213,7 +1230,7 @@ class InterviewEngine:
         except ValueError:
             company = CompanyMode.CUSTOM
         round_type = RoundType(self.config.get("round_type", "hr"))
-        scorecard = await generate_final_scorecard(self.answers, company, round_type)
+        scorecard = await generate_final_scorecard(self.answers, company, round_type, self.config.get("resume_text", ""))
         
         # Compute stats locally
         s_sum = sum(a.get("star_s", 0) for a in self.answers)
