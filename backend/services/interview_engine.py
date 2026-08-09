@@ -1262,15 +1262,15 @@ class InterviewEngine:
                     "question_number": i + 1,
                     "question_text": a.get("question", ""),
                     "answer_transcript": a.get("transcript", ""),
-                    "wpm": a.get("wpm", 0),
+                    "wpm": int(round(a.get("wpm", 0))),
                     "filler_words": {},
-                    "star_s": a.get("star_s", 0),
-                    "star_t": a.get("star_t", 0),
-                    "star_a": a.get("star_a", 0),
-                    "star_r": a.get("star_r", 0),
-                    "answer_score": a.get("technical_score", 0),
+                    "star_s": int(round(a.get("star_s", 0))),
+                    "star_t": int(round(a.get("star_t", 0))),
+                    "star_a": int(round(a.get("star_a", 0))),
+                    "star_r": int(round(a.get("star_r", 0))),
+                    "answer_score": int(round(a.get("technical_score", 0))),
                     "ai_feedback": a.get("ai_feedback", ""),
-                    "confidence_avg": a.get("confidence", 0.0)
+                    "confidence_avg": float(a.get("confidence", 0.0))
                 })
             
             if records:
@@ -1314,10 +1314,10 @@ class InterviewEngine:
                     new_best = max(best_score, overall_score)
                     
                     supabase.table("users").update({
-                        "current_streak": current_streak,
-                        "longest_streak": longest_streak,
+                        "current_streak": int(current_streak),
+                        "longest_streak": int(longest_streak),
                         "last_practice_date": today.isoformat(),
-                        "best_score": new_best
+                        "best_score": int(new_best)
                     }).eq("id", user_id).execute()
                     
         except Exception as e:
