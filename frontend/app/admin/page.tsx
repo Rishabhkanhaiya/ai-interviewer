@@ -190,8 +190,6 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* Pending Payouts */}
-        <div className="bg-gray-900 border border-white/10 rounded-2xl p-6">
         {/* Affiliates & Toggles Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
           
