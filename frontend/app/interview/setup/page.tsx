@@ -126,6 +126,9 @@ export default function InterviewSetupPage() {
         setUserName(session.user.user_metadata?.full_name || session.user.email || '')
         // Fetch profile to prefill resume_text
         apiClient.getProfile().then(({ data }) => {
+          if (data.name) {
+            setUserName(data.name)
+          }
           if (data.resume_text) {
             setResumeText(data.resume_text)
             setShowTextarea(true)
